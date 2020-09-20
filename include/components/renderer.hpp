@@ -59,8 +59,8 @@ class renderer
   void reserve_space(edge side, unsigned int w);
 #endif
   void fill_background();
-  void fill_overline(double x, double w, unsigned int color);
-  void fill_underline(double x, double w, unsigned int color);
+  void fill_overline(double x, double w, color color);
+  void fill_underline(double x, double w, color color);
   void fill_borders();
   void draw_text(const string& contents);
   void increment_subframe(unsigned int& framerate);
@@ -73,7 +73,7 @@ class renderer
 
   void flush(alignment a);
   void highlight_clickable_areas();
-  unsigned int parse_color(const string& value, unsigned int fallback);
+  color parse_color(const string& value, color fallback);
 
   bool on(const signals::ui::request_snapshot& evt);
   bool on(const signals::parser::change_background& evt);

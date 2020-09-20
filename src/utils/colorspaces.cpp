@@ -4,87 +4,41 @@
 
 POLYBAR_NS
 
-double3::double3(const string& str) {
-  string tmp = str;
-  string::size_type sz;
-  a = std::stod(tmp, &sz);
-  b = std::stod(&tmp[sz], &sz);
-  c = std::stod(&tmp[sz]);
-}
-
-double3::double3(const rgba& src): a(src.r), b(src.g), c(src.b) {}
-
-string double3::to_string() const {
-  return std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(c);
-}
-
-void double3::copy_to(rgba& dest) const {
-  dest.r = a;
-  dest.g = b;
-  dest.b = c;
-}
-
 namespace colorspaces {
-
-	color_error unk_colorspace(type t) {
-    return color_error("Unknown colorspace " + to_string(static_cast<int>(t)));
-	}
 	
-  void color::set_colorspace(type t) {
-    type c = colorspace;
-    colorspace = t;
-    type common = c | t;
-
-#define CONTAINS(parent, node) (node & ~type::parent) == type::none
-#define SINGLE_UPTO(parent, child, transform) \
-		if (c == type::child) {										\
-  		transform(data, data);									\
-		} else if (c != type::parent) {						\
-  		throw unk_colorspace(c);								\
-		}
-#define SINGLE_DOWNFROM(parent, child, transform) \
-		if (t == type::child) {												\
-  		transform(data, data);											\
-		} else if (t != type::parent) {								\
-  		throw unk_colorspace(t);										\
-  	}
-  		
-    if (CONTAINS(RGB, common)) {
-  		SINGLE_UPTO(RGB, HSL, hsl_rgb);
-  		SINGLE_DOWNFROM(RGB, HSL, rgb_hsl);
-  		return;
-		}
-		if (CONTAINS(Jzazbz, common)) {
-  		SINGLE_UPTO(Jzazbz, Jch, ch_ab);
-  		SINGLE_DOWNFROM(Jzazbz, Jch, ab_ch);
-  		return;
-		}
-		
-    if (CONTAINS(RGB, c)) {
-  		SINGLE_UPTO(RGB, HSL, hsl_rgb);
-			rgb_xyz(data, data);
-		} else if (CONTAINS(Jzazbz, c)) {
-  		SINGLE_UPTO(Jzazbz, Jch, ch_ab);
-      jzazbz_xyz(data, data);
-    } else if (c != type::XYZ) {
-      throw unk_colorspace(c);
-    }
-    
-		if (CONTAINS(RGB, t)) {
-  		xyz_rgb(data, data);
-  		SINGLE_DOWNFROM(RGB, HSL, rgb_hsl);
-		} else if (CONTAINS(Jzazbz, t)) {
-  		xyz_jzazbz(data, data);
-  		SINGLE_DOWNFROM(Jzazbz, Jch, ab_ch);
-		} else if (t != type::XYZ) {
-      throw unk_colorspace(t);
-		}
-#undef SINGLE_UPTO
-#undef SINGLE_DOWNFROM
-#undef CONTAINS
+  color_error unk_colorspace(colorspaces::type t) {
+    return color_error("Unknown colorspace " + to_string(static_cast<int>(t)));
   }
 
-	void rgb_hsl(const double3& input, double3& output) {
+	type to_type(string&& name) {
+  	name = string_util::lower(name);
+  	if (name == "rgb")
+  		return type::RGB;
+  	if (name == "hsl")
+  		return type::HSL;
+  	if (name == "jch")
+  		return type::Jch;
+  	if (name == "jzazbz")
+  		return type::Jzazbz;
+  	throw unk_colorspace(name);
+	}
+
+	string to_string(type t) {
+  	switch (t) {
+  		case type::RGB:
+  			return "rgb";
+  		case type::HSL:
+  			return "hsl";
+  		case type::Jch:
+  			return "jch";
+  		case type::Jzazbz:
+  			return "jzazbz";
+  		default:
+    		throw unk_colorspace("");
+  	}
+	}
+
+	void rgb_hsl(const color& input, color& output) {
     double r = input.a, g = input.b, b = input.c;
     double max = math_util::max(r, math_util::max(g, b)),
     			 min = math_util::min(r, math_util::min(g, b));
@@ -104,7 +58,7 @@ namespace colorspaces {
     }
 	}
 	
-	void hsl_rgb(const double3& input, double3& output) {
+	void hsl_rgb(const color& input, color& output) {
   	double h = input.a, s = input.b, l = input.c;
 		if (input.b == 0.0) {
       output.a = output.b = output.c = l;
@@ -138,14 +92,14 @@ namespace colorspaces {
                        : 0.07739938080495357 * x;
   }
 
-  void xyz_rgb(const double3& i, double3& o, double white_lum) {
+  void xyz_rgb(const color& i, color& o, double white_lum) {
     double x = i.a, y = i.b, z = i.c;
     o.a = gamma(+ 0.03241003232976359  *x - 0.015373989694887858*y - 0.004986158819963629  *z) / white_lum;
     o.b = gamma(- 0.009692242522025166 *x + 0.01875929983695176 *y + 0.00041554226340084706*z) / white_lum;
     o.c = gamma(+ 0.0005563941985197545*x - 0.0020401120612391  *y + 0.010571489771875336  *z) / white_lum;
   }
   
-  void rgb_xyz(const double3& i, double3& o, double white_lum) {
+  void rgb_xyz(const color& i, color& o, double white_lum) {
     double r = inverse_gamma(i.a) * white_lum, g = inverse_gamma(i.b) * white_lum, b = inverse_gamma(i.c) * white_lum;
     o.a = 41.23865632529916  *r + 35.75914909206253 *g +  18.045049120356364*b;
     o.b = 21.26368216773238  *r + 71.51829818412506 *g +   7.218019648142546*b;
@@ -161,7 +115,7 @@ namespace colorspaces {
     return 1e4 * pow((0.8359375 - XX) / (18.6875*XX - 18.8515625), 6.277394636015326);
   }
 
-  void xyz_jzazbz(const double3& i, double3& o) {
+  void xyz_jzazbz(const color& i, color& o) {
     double Lp = perceptual_quantizer(0.674207838*i.a + 0.382799340*i.b - 0.047570458*i.c);
     double Mp = perceptual_quantizer(0.149284160*i.a + 0.739628340*i.b + 0.083327300*i.c);
     double Sp = perceptual_quantizer(0.070941080*i.a + 0.174768000*i.b + 0.670970020*i.c);
@@ -171,7 +125,7 @@ namespace colorspaces {
     o.a = (0.44 * Iz) / (1 - 0.56*Iz) - 1.6295499532821566e-11;
   }
 
-  void jzazbz_xyz(const double3& i, double3& o) {
+  void jzazbz_xyz(const color& i, color& o) {
     double Jz = i.a + 1.6295499532821566e-11;
     double Iz = Jz / (0.44 + 0.56*Jz);
     double L = inv_perceptual_quantizer(Iz + 1.386050432715393e-1*i.b + 5.804731615611869e-2*i.c);
@@ -182,7 +136,7 @@ namespace colorspaces {
     o.c = - 9.098281098284756e-02*L - 3.127282905230740e-01*M + 1.522766561305260e+00*S;
   }
 
-  void ab_ch(const double3& i, double3& o) {
+  void ab_ch(const color& i, color& o) {
     auto h = atan2(i.c, i.b);
     h = h > 0 ? (h / M_PI) * 180 : 360 + h / M_PI * 180;
     o.b = sqrt(i.b * i.b + i.c * i.c);
@@ -190,7 +144,7 @@ namespace colorspaces {
     o.a = i.a;
   }
 
-  void ch_ab(const double3& i, double3& o) {
+  void ch_ab(const color& i, color& o) {
     auto h = i.c / 180 * M_PI;
     auto chroma = i.b;
     o.b = cos(h) * chroma;

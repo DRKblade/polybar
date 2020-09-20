@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include "common.hpp"
+#include "utils/color.hpp"
 
 POLYBAR_NS
 
@@ -117,12 +118,12 @@ struct radius {
 };
 
 struct border_settings {
-  unsigned int color{0xFF000000};
+  color color{1, 0, 0, 1};
   unsigned int size{0U};
 };
 
 struct line_settings {
-  unsigned int color{0xFF000000};
+  color color{1, 0, 0, 1};
   unsigned int size{0U};
 };
 
@@ -165,9 +166,9 @@ struct bar_settings {
   side_values module_margin{0U, 0U};
   edge_values strut{0U, 0U, 0U, 0U};
 
-  unsigned int background{0xFF000000};
-  unsigned int foreground{0xFFFFFFFF};
-  vector<unsigned int> background_steps;
+  color background{0, 1, 1, 1};
+  color foreground{1, 1, 1, 1};
+  vector<color> background_steps;
 
   line_settings underline{};
   line_settings overline{};

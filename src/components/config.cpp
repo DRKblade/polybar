@@ -112,13 +112,6 @@ gradient_t config::get_gradient(const string& name) const {
   return it->second;
 }
 
-string config::get_color(const string& section, const string& key, const string& default_value) const {
-  auto value = get(section, key, default_value);
-  if (!dereference(section, key, value))
-    value = default_value;
-  return color_util::colorspace_torgb(move(value));
-}
-
 void config::try_get_list(const string& section, const string& key, vector<string>& result) const {
   result.clear();
   while (true) {
@@ -240,21 +233,20 @@ bool config::dereference(const string& section, const string& key, string& value
 string config::dereference_color(string&& value, const string& current_section, vector<string>& ref_trace) const {
   auto pos = value.find(".");
   auto pos2 = value.find(";");
-  string color;
+  string color_str;
   if (pos == string::npos || (pos2 != string::npos && pos > pos2)) {
-		color = pos2 == string::npos ? move(value) : value.substr(0, pos2);
+		color_str = pos2 == string::npos ? move(value) : value.substr(0, pos2);
   } else {
     auto section = value.substr(0, pos);
     pos++;
     auto key = pos2 == string::npos ? value.substr(pos) : value.substr(pos,pos2-pos);
-    color = dereference_local(move(section), move(key), move(current_section), ref_trace);
+    color_str = dereference_local(move(section), move(key), move(current_section), ref_trace);
   }
-  if (pos2 != string::npos) {
-    auto base_color = rgba::get_rgba(color);
-    double3 jab(base_color);
-    colorspaces::rgb_xyz(jab, jab);
-    colorspaces::xyz_jzazbz(jab, jab);
-    colorspaces::ab_ch(jab, jab);
+  if (pos2 == string::npos) {
+    return color_str;
+  } else {
+    auto color = color::parse(color_str);
+    color.set_colorspace(colorspaces::type::Jzazbz);
     bool ended;
     do {
       pos = pos2 + 1;
@@ -279,13 +271,13 @@ string config::dereference_color(string&& value, const string& current_section, 
       auto amount = std::stod(&value[op_pos + 1]);
       double* modified;
       if (property == "lum" || property == "lightness" || property == "luminosity") {
-        modified = &jab.a;
+        modified = &color.a;
       } else if (property == "chroma" || property == "sat" || property == "saturation") {
-        modified = &jab.b;
+        modified = &color.b;
       } else if (property == "hue") {
-        modified = &jab.c;
+        modified = &color.c;
       } else if (property == "alpha" || property == "opacity") {
-        modified = &base_color.a;
+        modified = &color.a;
       } else {
         throw value_error("Invalid color property \"" + property + "\" defined at \"" + ref_trace.back() + "\"");
       }
@@ -299,13 +291,8 @@ string config::dereference_color(string&& value, const string& current_section, 
         default: throw value_error("Unexpected error, this is a bug, please report!");
       }
     } while (!ended);
-    colorspaces::ch_ab(jab, jab);
-    colorspaces::jzazbz_xyz(jab, jab);
-    colorspaces::xyz_rgb(jab, jab);
-    jab.copy_to(base_color);
-    color = color_util::hex<unsigned short int>(base_color);
+    return color.to_string();
   }
-  return color;
 }
 
 string config::dereference_local(string&& section, string&& key, const string& current_section, vector<string>& ref_trace) const {
@@ -499,28 +486,28 @@ unsigned long long config::convert(string&& value) const {
 }
 
 template <>
-chrono::seconds config::convert(string&& value) const {
-  return chrono::seconds{convert<chrono::seconds::rep>(forward<string>(value))};
+std::chrono::seconds config::convert(string&& value) const {
+  return std::chrono::seconds{convert<std::chrono::seconds::rep>(forward<string>(value))};
 }
 
 template <>
-chrono::milliseconds config::convert(string&& value) const {
-  return chrono::milliseconds{convert<chrono::milliseconds::rep>(forward<string>(value))};
+std::chrono::milliseconds config::convert(string&& value) const {
+  return std::chrono::milliseconds{convert<std::chrono::milliseconds::rep>(forward<string>(value))};
 }
 
 template <>
-chrono::duration<double> config::convert(string&& value) const {
-  return chrono::duration<double>{convert<double>(forward<string>(value))};
-}
-
-template <>
-rgba config::convert(string&& value) const {
-  return rgba::get_rgba(value);
+std::chrono::duration<double> config::convert(string&& value) const {
+  return std::chrono::duration<double>{convert<double>(forward<string>(value))};
 }
 
 template <>
 cairo_operator_t config::convert(string&& value) const {
   return cairo::utils::str2operator(forward<string>(value), CAIRO_OPERATOR_OVER);
+}
+
+template<>
+color config::convert(string&& value) const {
+  return color::parse(value);
 }
 
 template <>

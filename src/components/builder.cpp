@@ -240,7 +240,6 @@ void builder::color(string color, syntaxtag tag) {
   } else if (color != m_colors[tag]) {
     m_colors[tag] = color;
     m_colors_closing[tag] = false;
-    color = color_util::simplify_hex(color);
     tag_open(tag, color);
   }
 }
@@ -256,7 +255,6 @@ void builder::line_color(string color, attribute attr) {
   } else if (color != m_colors[tag]) {
     m_colors[tag] = color;
     m_colors_closing[tag] = false;
-    color = color_util::simplify_hex(color);
     tag_open(tag, color);
     tag_open(attr);
   }
@@ -330,7 +328,7 @@ void builder::cmd_close() {
 string builder::color_hex(syntaxtag tag) {
   string& value = m_colors_default[tag];
   if (value.empty()) {
-    unsigned int code;
+    struct color code;
 		switch(tag) {
   	 case syntaxtag::B:
     	code = m_bar.background;
@@ -347,7 +345,7 @@ string builder::color_hex(syntaxtag tag) {
      default:
       throw application_error("Unknown color tag '" + to_string(static_cast<int>(tag)) + "'");
 		}
-		value = color_util::hex<unsigned short int>(code);
+		value = code.to_hex();
   }
   return value;
 }

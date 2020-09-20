@@ -640,9 +640,8 @@ void tray_manager::set_wm_hints() {
 void tray_manager::set_tray_colors() {
   m_log.trace("tray: Set _NET_SYSTEM_TRAY_COLORS to %x", m_opts.background);
 
-  auto r = color_util::red_channel(m_opts.background);
-  auto g = color_util::green_channel(m_opts.background);
-  auto b = color_util::blue_channel(m_opts.background);
+	unsigned char r, g, b;
+	split_channels(m_opts.background, r, g, b);
 
   const unsigned int colors[12] = {
       r, g, b,  // normal

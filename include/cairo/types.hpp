@@ -4,6 +4,7 @@
 
 #include "common.hpp"
 #include "components/types.hpp"
+#include "utils/color.hpp"
 
 POLYBAR_NS
 
@@ -45,7 +46,7 @@ namespace cairo {
     double y1;
     double x2;
     double y2;
-    vector<unsigned int> steps;
+    vector<color> steps;
   };
   struct rounded_corners {
     double x;
@@ -58,7 +59,7 @@ namespace cairo {
     alignment align;
     string contents;
     int font;
-    unsigned int bg;
+    color bg;
     cairo_operator_t bg_operator;
     rect bg_rect;
     double *x_advance;

@@ -97,7 +97,7 @@ renderer::renderer(connection& conn, signal_emitter& sig, const config& conf, co
     unsigned int mask{0};
     unsigned int value_list[32]{0};
     xcb_params_gc_t params{};
-    XCB_AUX_ADD_PARAM(&mask, &params, foreground, m_bar.foreground);
+    XCB_AUX_ADD_PARAM(&mask, &params, foreground, m_bar.foreground.to_uint());
     XCB_AUX_ADD_PARAM(&mask, &params, graphics_exposures, 0);
     connection::pack_values(mask, &params, value_list);
     m_gcontext = m_connection.generate_id();
@@ -241,7 +241,7 @@ void renderer::begin(xcb_rectangle_t rect) {
         static_cast<double>(m_rect.width),
         static_cast<double>(m_rect.height), m_bar.radius};
     // clang-format on
-    *m_context << rgba{1.0, 1.0, 1.0, 1.0};
+    *m_context << color::white();
     m_context->fill();
     m_context->pop(&m_cornermask);
     m_context->restore();
@@ -385,7 +385,8 @@ void renderer::flush(alignment a) {
     *m_context << cairo::abspos{0.0, 0.0};
     *m_context << cairo::rect{x + visible_width - fsize, y, fsize, h};
     m_context->clip(true);
-    *m_context << cairo::linear_gradient{x + visible_width - fsize, y, x + visible_width, y, {0x00000000, 0xFF000000}};
+    *m_context << cairo::linear_gradient{x + visible_width - fsize, y, x + visible_width, y,
+                                         {color::transparent(), color::black()}};
     m_context->paint(0.25);
     m_context->restore();
   }
@@ -595,7 +596,7 @@ void renderer::fill_background() {
 /**
  * Fill overline color
  */
-void renderer::fill_overline(double x, double w, unsigned int color) {
+void renderer::fill_overline(double x, double w, color color) {
   m_log.trace_x("renderer: overline(x=%f, w=%f)", x, w);
   m_context->save();
   *m_context << m_comp_ol;
@@ -608,7 +609,7 @@ void renderer::fill_overline(double x, double w, unsigned int color) {
 /**
  * Fill underline color
  */
-void renderer::fill_underline(double x, double w, unsigned int color) {
+void renderer::fill_underline(double x, double w, color color) {
   m_log.trace_x("renderer: underline(x=%f, w=%f)", x, w);
   m_context->save();
   *m_context << m_comp_ul;
@@ -665,13 +666,13 @@ void renderer::fill_borders() {
   m_context->restore();
 }
 
-unsigned int renderer::parse_color(const string& value, unsigned int fallback) {
+color renderer::parse_color(const string& value, color fallback) {
   if (value.compare(0, 5, "anim:") == 0) {
     m_anim_used = true;
     return parse_animated_color(m_conf, value.substr(5))->get(m_time);
   }
   if (!value.empty() && value[0] != '-') {
-		return color_util::parse(value, fallback);
+		return color::parse(value, fallback);
   }
   return fallback;
 }

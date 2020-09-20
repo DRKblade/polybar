@@ -26,7 +26,7 @@ animated_color_t parse_animated_color(const config& conf, const string& value) {
 unsigned int animated_color::get(double time) {
   auto percentage = time / m_duration + m_offset;
   return m_gradient->get_by_percentage_raw(
-    static_cast<float>(percentage - (long)percentage) * 100.0f);
+    static_cast<float>(percentage - (long)percentage) * 100.0f).to_uint();
 }
 
 POLYBAR_NS_END

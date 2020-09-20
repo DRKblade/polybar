@@ -12,7 +12,7 @@ class animated_color {
   	  m_duration(duration),
   	  m_offset(offset) {}
 
-  unsigned int get(double time);
+  color get(double time);
 
  protected:
   gradient_t m_gradient;
