@@ -48,6 +48,8 @@ function(add_unit_test source_file)
 endfunction()
 
 add_unit_test(utils/color)
+add_unit_test(utils/hsla)
+add_unit_test(utils/gradient)
 add_unit_test(utils/command)
 add_unit_test(utils/math unit_tests)
 add_unit_test(utils/memory unit_tests)

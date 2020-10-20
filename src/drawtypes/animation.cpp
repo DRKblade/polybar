@@ -38,12 +38,10 @@ namespace drawtypes {
   animation_t load_animation(const config& conf, const string& section, string name, bool required) {
     vector<label_t> vec;
     label_t tmplate;
-
-    load_labellist(vec, tmplate, conf, section, name, required);
-
+    gradient_t fg, bg, ul, ol;
+    load_labellist(vec, tmplate, fg, bg, ul, ol, conf, section, name, required);
     auto framerate = conf.get(section, name + "-framerate", 1000);
-
-    return factory_util::shared<animation>(move(vec), framerate, move(tmplate));
+    return factory_util::shared<animation>(move(vec), framerate, move(tmplate), move(fg), move(bg), move(ul), move(ol));
   }
 }  // namespace drawtypes
 

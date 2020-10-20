@@ -15,7 +15,9 @@ namespace drawtypes {
 
   label_t ramp::get_by_percentage(float percentage) {
     size_t index = percentage * m_labels.size() / 100.0f;
-    return get(math_util::cap<size_t>(index, 0, m_labels.size() - 1));
+    auto result = get(math_util::cap<size_t>(index, 0, m_labels.size() - 1));
+    apply_gradient(result, percentage);
+    return result;
   }
 
   label_t ramp::get_by_percentage_with_borders(int value, int min, int max) {
@@ -27,12 +29,12 @@ namespace drawtypes {
     if (value <= min) {
       index = 0;
     } else if (value >= max) {
-      index = m_icons.size() - 1;
+      index = m_labels.size() - 1;
     } else {
-      value = math_util::percentage(value, min, max);
-      index = value * (m_icons.size() - 2) / 100.0f + 1;
-      index = math_util::cap<size_t>(index, 0, m_icons.size() - 1);
+      index = value * (m_labels.size() - 2) / 100.0f + 1;
+      index = math_util::cap<size_t>(index, 0, m_labels.size() - 1);
     }
+    apply_gradient(m_labels[index], value);
     return m_labels[index];
   }
 
@@ -47,10 +49,9 @@ namespace drawtypes {
   ramp_t load_ramp(const config& conf, const string& section, string name, bool required) {
     vector<label_t> vec;
     label_t tmplate;
-
-    load_labellist(vec, tmplate, conf, section, name, required);
-
-    return factory_util::shared<drawtypes::ramp>(move(vec), move(tmplate));
+    gradient_t fg, bg, ul, ol;
+    load_labellist(vec, tmplate, fg, bg, ul, ol, conf, section, name, required);
+    return factory_util::shared<drawtypes::ramp>(move(vec), move(tmplate), move(fg), move(bg), move(ul), move(ol));
   }
 }
 
