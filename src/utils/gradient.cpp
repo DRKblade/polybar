@@ -4,15 +4,32 @@
 
 POLYBAR_NS
 
-void gradient::add(hsla&& color) {
-  colors.emplace_back(move(color));
+void gradient::add(hsla color, float percentage) {
+  if (colors.size() == 0 || colors.back().position <= percentage)
+    colors.emplace_back(color_point(color, percentage));
+  else {
+    auto it = colors.begin();
+    for (; percentage > it->position; it++);
+    colors.emplace(it, color_point(color, percentage));
+  }
 }
 
 string gradient::get_by_percentage(float percentage) {
-  auto intervals = colors.size() - 1;
-  auto lower = math_util::cap<size_t>(percentage * intervals / 100.0f, 0, intervals - 1);
-  auto interval_percentage = fmod(percentage * intervals, 100.0f);
-  return color_util::hex<unsigned short int>(interpolate(colors[lower], colors[lower+1], interval_percentage).to_rgba());
+  if (colors.size() == 0) return "";
+  hsla result;
+  size_t upper = 0;
+  for (; upper < colors.size(); upper++)
+    if (colors[upper].position >= percentage) break;
+    
+  if (upper <= 0) {
+    result = colors.front().color;
+  } else if (upper >= colors.size()) {
+    result = colors.back().color;
+  } else {
+    auto interval_percentage = math_util::percentage(percentage, colors[upper-1].position, colors[upper].position);
+    result = interpolate(colors[upper-1].color, colors[upper].color, interval_percentage);
+  }
+  return color_util::hex<unsigned short int>(result.to_rgba());
 }
 
 hsla gradient::interpolate(const hsla& min, const hsla& max, float percentage) {

@@ -6,7 +6,7 @@ POLYBAR_NS
 
 namespace drawtypes {
   void ramp::add(label_t&& icon) {
-    m_labels.emplace_back(forward<decltype(icon)>(icon));
+    m_labels.emplace_back(move(icon));
   }
 
   label_t ramp::get(size_t index) {
