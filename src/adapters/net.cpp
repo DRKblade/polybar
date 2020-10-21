@@ -1,7 +1,5 @@
 #include "adapters/net.hpp"
 
-#include <iomanip>
-
 #include <arpa/inet.h>
 #include <linux/ethtool.h>
 #include <linux/if_link.h>
@@ -11,6 +9,8 @@
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+
+#include <iomanip>
 
 #include "common.hpp"
 #include "settings.hpp"
@@ -88,18 +88,18 @@ namespace net {
           char ip6_buffer[INET6_ADDRSTRLEN];
           sa6 = reinterpret_cast<decltype(sa6)>(ifa->ifa_addr);
           if (IN6_IS_ADDR_LINKLOCAL(&sa6->sin6_addr)) {
-              continue;
+            continue;
           }
           if (IN6_IS_ADDR_SITELOCAL(&sa6->sin6_addr)) {
-              continue;
+            continue;
           }
           if ((((unsigned char*)sa6->sin6_addr.s6_addr)[0] & 0xFE) == 0xFC) {
-              /* Skip Unique Local Addresses (fc00::/7) */
-              continue;
+            /* Skip Unique Local Addresses (fc00::/7) */
+            continue;
           }
           if (inet_ntop(AF_INET6, &sa6->sin6_addr, ip6_buffer, INET6_ADDRSTRLEN) == 0) {
-              m_log.warn("inet_ntop() " + string(strerror(errno)));
-              continue;
+            m_log.warn("inet_ntop() " + string(strerror(errno)));
+            continue;
           }
           m_status.ip6 = string{ip6_buffer};
           break;
@@ -209,7 +209,6 @@ namespace net {
     if (strncmp(driver.driver, "bridge", 6) == 0) {
       m_bridge = true;
     }
-
   }
 
   /**
@@ -225,9 +224,10 @@ namespace net {
    * Format up- and download speed
    */
   string network::format_speedrate(float bytes_diff, int minwidth) const {
-    const auto duration = m_status.current.time - m_status.previous.time;
-    float time_diff = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
-    float speedrate = bytes_diff / (time_diff ? time_diff : 1);
+    // Get time difference in seconds as a float
+    const std::chrono::duration<float> duration = m_status.current.time - m_status.previous.time;
+    float time_diff = duration.count();
+    float speedrate = bytes_diff / time_diff;
 
     vector<string> suffixes{"GB", "MB"};
     string suffix{"KB"};
@@ -256,7 +256,7 @@ namespace net {
       return true;
     }
 
-    if(m_bridge) {
+    if (m_bridge) {
       /* If bridge network then link speed cannot be computed
        * TODO: Identify the physical network in bridge and compute the link speed
        */
@@ -308,7 +308,9 @@ namespace net {
    * about the current connection
    */
   string wired_network::linkspeed() const {
-    return m_linkspeed == -1 ? "N/A" : (m_linkspeed < 1000 ? (to_string(m_linkspeed) + " Mbit/s") : (to_string(m_linkspeed / 1000) + " Gbit/s"));
+    return m_linkspeed == -1 ? "N/A"
+                             : (m_linkspeed < 1000 ? (to_string(m_linkspeed) + " Mbit/s")
+                                                   : (to_string(m_linkspeed / 1000) + " Gbit/s"));
   }
 
   // }}}
