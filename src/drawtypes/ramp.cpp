@@ -26,12 +26,12 @@ namespace drawtypes {
 
   label_t ramp::get_by_percentage_with_borders(float value, float min, float max) {
     size_t index;
-    if (value <= min) {
+    value = math_util::unbounded_percentage(value, min, max);
+    if (value <= 0) {
       index = 0;
-    } else if (value >= max) {
+    } else if (value >= 100) {
       index = m_labels.size() - 1;
     } else {
-      value = math_util::percentage(value, min, max);
       index = value * (m_labels.size() - 2) / 100.0f + 1;
       index = math_util::cap<size_t>(index, 0, m_labels.size() - 1);
     }
