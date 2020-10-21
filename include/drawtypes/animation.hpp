@@ -17,8 +17,12 @@ namespace drawtypes {
   class animation : public labellist {
    public:
     explicit animation(unsigned int framerate_ms) : m_framerate_ms(framerate_ms) {}
-    explicit animation(vector<label_t>&& frames, int framerate_ms, label_t&& tmplate)
-        : labellist(move(frames), move(tmplate))
+    explicit animation(vector<label_t>&& frames, int framerate_ms, label_t&& tmplate,
+          gradient_t&& fg,
+          gradient_t&& bg,
+          gradient_t&& ul,
+          gradient_t&& ol)
+        : labellist(move(frames), move(tmplate), move(fg), move(bg), move(ul), move(ol))
         , m_framerate_ms(framerate_ms)
         , m_framecount(m_labels.size())
         , m_frame(m_labels.size() - 1) {}

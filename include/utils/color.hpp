@@ -5,6 +5,7 @@
 
 #include "common.hpp"
 #include "utils/cache.hpp"
+#include "utils/hsla.hpp"
 #include "utils/math.hpp"
 
 POLYBAR_NS
