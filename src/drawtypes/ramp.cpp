@@ -29,10 +29,11 @@ namespace drawtypes {
     if (value <= min) {
       index = 0;
     } else if (value >= max) {
-      index = m_labels.size() - 1;
+      index = m_icons.size() - 1;
     } else {
-      index = value * (m_labels.size() - 2) / 100.0f + 1;
-      index = math_util::cap<size_t>(index, 0, m_labels.size() - 1);
+      value = math_util::percentage(value, min, max);
+      index = value * (m_icons.size() - 2) / 100.0f + 1;
+      index = math_util::cap<size_t>(index, 0, m_icons.size() - 1);
     }
     apply_gradient(m_labels[index], value);
     return m_labels[index];
