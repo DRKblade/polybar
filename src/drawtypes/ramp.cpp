@@ -48,6 +48,7 @@ namespace drawtypes {
    * from the configuration
    */
   ramp_t load_ramp(const config& conf, const string& section, string name, bool required) {
+    name = string_util::ltrim(string_util::rtrim(move(name), '>'), '<');
     vector<label_t> vec;
     label_t tmplate;
     gradient_t fg, bg, ul, ol;
