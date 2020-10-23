@@ -36,7 +36,6 @@ namespace drawtypes {
       gradient_t& underline_grad,
       gradient_t& overline_grad,
       const config& conf, const string& section, string name, bool required) {
-
     vector<string> names;
     if(required) {
       names = conf.get_list(section, name);
