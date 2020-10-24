@@ -1,89 +1,97 @@
 #include <cmath>
 #include "utils/colorspaces.hpp"
-// source: www.easyrgb.com/en/math.php
 
-namespace cie {
-  void xyz_rgb(double3& c) {
-    auto r = c.a * 3.2406 + c.b * -1.5372 + c.c * -0.4986;
-    auto g = c.a * -0.9689 + c.b * 1.8758 + c.c * 0.0415;
-    auto b = c.a * 0.0557 + c.b * -0.2040 + c.c * 1.0570;
+POLYBAR_NS
 
-    if (r > 0.0031308)
-      c.a = 1.055 * (pow(r, 1.0/2.4)) - 0.055;
-    else c.a = r * 12.92;
-    if (g > 0.0031308)
-      c.b = 1.055 * (pow(g, 1.0/2.4)) - 0.055;
-    else c.b *= g * 12.92;
-    if (b > 0.0031308)
-      c.c = 1.055 * (pow(b, 1.0/2.4)) - 0.055;
-    else c.c *= b * 12.92;
+namespace colorspaces {
+  double3::double3(const string& str) {
+    string tmp = str;
+    string::size_type sz;
+    a = stod(tmp, &sz);
+    b = stod(tmp = tmp.substr(sz), &sz);
+    c = stod(tmp.substr(sz));
+  }
+
+  bool double3::is_near(const double3& other, double tolerance) const {
+    return abs(a - other.a) <= tolerance &&
+           abs(b - other.b) <= tolerance &&
+           abs(c - other.c) <= tolerance;
+  }
+
+  string double3::to_string() const {
+    return std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(c);
+  }
+
+  // source: https://observablehq.com/@jrus/srgb#srgb_to_xyz
+  // source: https://observablehq.com/@jrus/jzazbz
+
+  inline double gamma(double x) {
+    return x > 0.0031308 ? 1.055 * pow(x, 0.4166666666666667) - 0.055
+                         : 12.92 * x;
+  }
+  inline double inverse_gamma(double x) {
+    return x > 0.04045 ? pow((x + 0.055) * 0.9478672985781991, 2.4)
+                       : 0.07739938080495357 * x;
+  }
+
+  void xyz_rgb(const double3& i, double3& o, double white_lum) {
+    o.a = gamma(+ 0.03241003232976359  *i.a - 0.015373989694887858*i.b - 0.004986158819963629  *i.c)/ white_lum;
+    o.b = gamma(- 0.009692242522025166 *i.a + 0.01875929983695176 *i.b + 0.00041554226340084706*i.c)/ white_lum;
+    o.c = gamma(+ 0.0005563941985197545*i.a - 0.0020401120612391  *i.b + 0.010571489771875336  *i.c)/ white_lum;
   }
   
-  void rgb_xyz(double3& c) {
-    double r, g, b;
-    if (c.a > 0.04045)
-      r = pow((c.a + 0.055) / 1.055, 2.4);
-    else r = c.a / 12.92;
-    if (c.b > 0.04045)
-      g = pow((c.b + 0.055) / 1.055, 2.4);
-    else g = c.b / 12.92;
-    if (c.c > 0.04045)
-      b = pow((c.c + 0.055) / 1.055, 2.4);
-    else b = c.c / 12.92;
-
-    c.a = r * 0.4124 + g * 0.3576 + b * 0.1805;
-    c.b = r * 0.2126 + g * 0.7152 + b * 0.0722;
-    c.c = r * 0.0193 + g * 0.1192 + b * 0.9505;
-  }
-  
-  void xyz_lab(double3& c) {
-    c.a /= 0.94811;
-    c.c /= 1.07304;
-    double x, y, x;
-    if (c.a > 0.008856)
-      x = cbrt(c.a);
-    else x = 7.787 * c.a + 16.0 / 116.0;
-    if (c.b > 0.008856)
-      x = cbrt(c.b);
-    else x = 7.787 * c.b + 16.0 / 116.0;
-    if (c.c > 0.008856)
-      x = cbrt(c.c);
-    else x = 7.787 * c.c + 16.0 / 116.0;
-
-    c.a = 116.0 * y - 16.0;
-    c.b = 500 * (x - y);
-    c.c = 200 * (y - z);
-  }
-  
-  void lab_xyz(double3& c) {
-    auto y = (c.a + 16.0) / 116.0;
-    auto x = c.b / 500 + y;
-    auto z = y - c.c / 200;
-
-    c.y = y*y*y;
-    c.x = x*x*x;
-    c.z = z*z*z;
-    if (c.a <= 0.008856)
-      c.a = (y - 16.0 / 116.0) / 7.787;
-    if (c.b <= 0.008856)
-      c.b = (x - 16.0 / 116.0) / 7.787;
-    if (c.c <= 0.008856)
-      c.c = (z - 16.0 / 116.0) / 7.787;
-    c.a *= 0.94811;
-    c.c *= 1.07304;
+  void rgb_xyz(const double3& i, double3& o, double white_lum) {
+    double r = inverse_gamma(i.a) * white_lum, g = inverse_gamma(i.b) * white_lum, b = inverse_gamma(i.c) * white_lum;
+    o.a = 41.23865632529916  *r + 35.75914909206253 *g +  18.045049120356364*b;
+    o.b = 21.26368216773238  *r + 71.51829818412506 *g +   7.218019648142546*b;
+    o.c =  1.9330620152483982*r + 11.919716364020843*g +  95.03725870054352 *b;
   }
 
-  void lab_lch(double3& c) {
-    auto h = atan(c.c, c.b);
-    h = h > 0 ? (h / PI) * 180 : 360 + h / PI * 180;
-    c.b = sqrt(c.b * c.b + c.c * c.c);
-    c.c = h;
+  inline double perceptual_quantizer(double x) {
+    double XX = pow(x*1e-4, 0.1593017578125);
+    return pow((0.8359375 + 18.8515625*XX) / (1 + 18.6875*XX), 134.034375);
+  }
+  inline double inv_perceptual_quantizer(double x) {
+    double XX = pow(x, 7.460772656268214e-03);
+    return 1e4 * pow((0.8359375 - XX) / (18.6875*XX - 18.8515625), 6.277394636015326);
   }
 
-  void lch_lab(double3& c) {
-    auto h = c.c / 180 * PI;
-    auto chroma = c.b;
-    c.b = cos(h) * chroma;
-    c.c = sin(h) * chroma;
+  void xyz_jzazbz(const double3& i, double3& o) {
+    double Lp = perceptual_quantizer(0.674207838*i.a + 0.382799340*i.b - 0.047570458*i.c);
+    double Mp = perceptual_quantizer(0.149284160*i.a + 0.739628340*i.b + 0.083327300*i.c);
+    double Sp = perceptual_quantizer(0.070941080*i.a + 0.174768000*i.b + 0.670970020*i.c);
+    double Iz = 0.5 * (Lp + Mp);
+    o.b = 3.524000*Lp - 4.066708*Mp + 0.542708*Sp;
+    o.c = 0.199076*Lp + 1.096799*Mp - 1.295875*Sp;
+    o.a = (0.44 * Iz) / (1 - 0.56*Iz) - 1.6295499532821566e-11;
+  }
+
+  void jzazbz_xyz(const double3& i, double3& o) {
+    double Jz = i.a + 1.6295499532821566e-11;
+    double Iz = Jz / (0.44 + 0.56*Jz);
+    double L = inv_perceptual_quantizer(Iz + 1.386050432715393e-1*i.b + 5.804731615611869e-2*i.c);
+    double M = inv_perceptual_quantizer(Iz - 1.386050432715393e-1*i.b - 5.804731615611891e-2*i.c);
+    double S = inv_perceptual_quantizer(Iz - 9.601924202631895e-2*i.b - 8.118918960560390e-1*i.c);
+    o.a = + 1.661373055774069e+00*L - 9.145230923250668e-01*M + 2.313620767186147e-01*S;
+    o.b = - 3.250758740427037e-01*L + 1.571847038366936e+00*M - 2.182538318672940e-01*S;
+    o.c = - 9.098281098284756e-02*L - 3.127282905230740e-01*M + 1.522766561305260e+00*S;
+  }
+
+  void ab_ch(const double3& i, double3& o) {
+    auto h = atan2(i.c, i.b);
+    h = h > 0 ? (h / M_PI) * 180 : 360 + h / M_PI * 180;
+    o.b = sqrt(i.b * i.b + i.c * i.c);
+    o.c = h;
+    o.a = i.a;
+  }
+
+  void ch_ab(const double3& i, double3& o) {
+    auto h = i.c / 180 * M_PI;
+    auto chroma = i.b;
+    o.b = cos(h) * chroma;
+    o.c = sin(h) * chroma;
+    o.a = i.a;
   }
 }
+
+POLYBAR_NS_END

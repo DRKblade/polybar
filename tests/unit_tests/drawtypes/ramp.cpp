@@ -26,18 +26,12 @@ TEST(Ramp, perc) {
 
 }
 
-TEST(Ramp, config) {
+TEST(Ramp, gradient) {
   logger log(loglevel::NONE);
-  config conf(log);
-  string section = "test", name = "label-list";
-  conf.set(section, name + "-0", "A");
-  conf.set(section, name + "-1", "B");
-  conf.set(section, name + "-2", "C");
-  conf.set(section, name + "-0-background", "#000");
-  conf.set(section, name + "-1-background", "#fff");
-  conf.set(section, name + "-2-background", "#0ff");
-  conf.set(section, name + "-background-gradient", "true");
-  auto ramp = load_ramp(conf, section, name, false);
+  string config_txt = "./test_config.ini";
+  config_parser parser(log, move(config_txt), "example");
+  config::make_type conf = parser.parse();
+  auto ramp = load_ramp(conf, "test", "label", false);
   EXPECT_EQ(ramp->get(0)->get(), "A");
   EXPECT_EQ(ramp->get(0)->m_background, "#000");
   EXPECT_EQ(ramp->get_by_percentage(25)->m_background, "#ff7f7f7f");
