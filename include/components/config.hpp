@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <algorithm>
 
 #include "common.hpp"
 #include "components/logger.hpp"
@@ -88,6 +89,19 @@ class config {
       throw key_error("Missing parameter \"" + section + "." + key + "\"");
     }
     return dereference<T>(section, key, it->second.at(key), convert<T>(string{it->second.at(key)}));
+  }
+
+  /**
+   * Get value of a variable by section and parameter name
+   * with a reference trace to detect cyclical references
+   */
+  template <typename T = string>
+  T get(const string& section, const string& key, vector<string>& ref_trace) const {
+    auto it = m_sections.find(section);
+    if (it == m_sections.end() || it->second.find(key) == it->second.end()) {
+      throw key_error("Missing parameter \"" + section + "." + key + "\"");
+    }
+    return dereference<T>(section, key, it->second.at(key), convert<T>(string{it->second.at(key)}), ref_trace);
   }
 
   /**
@@ -214,9 +228,28 @@ class config {
    */
   template <typename T>
   T dereference(const string& section, const string& key, const string& var, const T& fallback) const {
+    vector<string> ref_trace{};
+    return dereference(section, key, var, fallback, ref_trace);
+  }
+
+  template <typename T>
+  T dereference(const string& section, const string& key, const string& var, const T& fallback, vector<string> ref_trace) const {
     if (var.substr(0, 2) != "${" || var.substr(var.length() - 1) != "}") {
       return fallback;
     }
+
+    string key_path = section + "." + key;
+    if (find(ref_trace.begin(), ref_trace.end(), key_path) != ref_trace.end()) {
+      string ref_str{};
+
+      for (const auto& p : ref_trace) {
+        ref_str += ">\t" + p + "n";
+      }
+      ref_str += ">\t" + key_path;
+
+      throw application_error(key_path + ": Dependency cycle detected:\n" + ref_str);
+    }
+    ref_trace.push_back(key_path);
 
     auto path = var.substr(2, var.length() - 3);
     size_t pos;
@@ -228,7 +261,7 @@ class config {
     } else if (path.compare(0, 5, "file:") == 0) {
       return dereference_file<T>(path.substr(5));
     } else if ((pos = path.find(".")) != string::npos) {
-      return dereference_local<T>(path.substr(0, pos), path.substr(pos + 1), section);
+      return dereference_local<T>(path.substr(0, pos), path.substr(pos + 1), section, ref_trace);
     } else {
       throw value_error("Invalid reference defined at \"" + section + "." + key + "\"");
     }
@@ -244,7 +277,7 @@ class config {
    *  ${section.key:fallback}
    */
   template <typename T>
-  T dereference_local(string section, const string& key, const string& current_section) const {
+  T dereference_local(string section, const string& key, const string& current_section, vector<string>& ref_trace) const {
     if (section == "BAR") {
       m_log.warn("${BAR.key} is deprecated. Use ${root.key} instead");
     }
@@ -254,9 +287,9 @@ class config {
     section = string_util::replace(section, "self", current_section, 0, 4);
 
     try {
-      string string_value{get<string>(section, key)};
+      string string_value{get<string>(section, key, ref_trace)};
       T result{convert<T>(string{string_value})};
-      return dereference<T>(string(section), move(key), move(string_value), move(result));
+      return dereference<T>(string(section), move(key), move(string_value), move(result), ref_trace);
     } catch (const key_error& err) {
       size_t pos;
       if ((pos = key.find(':')) != string::npos) {
