@@ -7,20 +7,21 @@
 
 POLYBAR_NS
 
+struct double3 {
+  double a, b, c;
+
+  explicit double3(double a, double b, double c) : a(a), b(b), c(c) {}
+  explicit double3(const string& str);
+  explicit double3(rgba& src) : a(src.r), b(src.g), c(src.b) {}
+  double3() {}
+
+  bool is_near(const double3& other, double tolerance) const;
+  void copy_to(rgba& dest) const;
+  string to_string() const;
+};
+
 namespace colorspaces {
 
-  struct double3 {
-    double a, b, c;
-
-    explicit double3(double a, double b, double c) : a(a), b(b), c(c) {}
-    explicit double3(const string& str);
-    explicit double3(rgba& src) : a(src.r), b(src.g), c(src.b) {}
-    double3() {}
-
-    bool is_near(const double3& other, double tolerance) const;
-    void copy_to(rgba& dest) const;
-    string to_string() const;
-  };
 
   void xyz_rgb(const double3& input, double3& output, double white_lum = 1);
   void rgb_xyz(const double3& input, double3& output, double white_lum = 1);

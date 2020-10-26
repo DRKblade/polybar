@@ -3,30 +3,31 @@
 
 POLYBAR_NS
 
+double3::double3(const string& str) {
+  string tmp = str;
+  string::size_type sz;
+  a = stod(tmp, &sz);
+  b = stod(tmp = tmp.substr(sz), &sz);
+  c = stod(tmp.substr(sz));
+}
+
+bool double3::is_near(const double3& other, double tolerance) const {
+  return abs(a - other.a) <= tolerance &&
+         abs(b - other.b) <= tolerance &&
+         abs(c - other.c) <= tolerance;
+}
+
+string double3::to_string() const {
+  return std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(c);
+}
+
+void double3::copy_to(rgba& dest) const {
+  dest.r = a;
+  dest.g = b;
+  dest.b = c;
+}
+
 namespace colorspaces {
-  double3::double3(const string& str) {
-    string tmp = str;
-    string::size_type sz;
-    a = stod(tmp, &sz);
-    b = stod(tmp = tmp.substr(sz), &sz);
-    c = stod(tmp.substr(sz));
-  }
-
-  bool double3::is_near(const double3& other, double tolerance) const {
-    return abs(a - other.a) <= tolerance &&
-           abs(b - other.b) <= tolerance &&
-           abs(c - other.c) <= tolerance;
-  }
-
-  string double3::to_string() const {
-    return std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(c);
-  }
-  
-  void double3::copy_to(rgba& dest) const {
-    dest.r = a;
-    dest.g = b;
-    dest.b = c;
-  }
 
   // source: https://observablehq.com/@jrus/srgb#srgb_to_xyz
   // source: https://observablehq.com/@jrus/jzazbz

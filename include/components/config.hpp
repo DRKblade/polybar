@@ -262,7 +262,7 @@ class config {
     } else if (path.compare(0, 5, "file:") == 0) {
       return dereference_file<T>(path.substr(5));
     } else if (path.compare(0, 6, "color:") == 0) {
-      return dereference_color<T>(path.substr(6), ref_trace);
+      return dereference_color<T>(path.substr(6), section, ref_trace);
     } else if ((pos = path.find(".")) != string::npos) {
       return dereference_local<T>(path.substr(0, pos), path.substr(pos + 1), section, ref_trace);
     } else {
@@ -271,7 +271,7 @@ class config {
   }
 
   template <typename T>
-  T dereference_color(string value, vector<string>& ref_trace) const {
+  T dereference_color(string value, string current_section, vector<string>& ref_trace) const {
     auto pos = value.find(".");
     if (pos == string::npos) {
       throw value_error("Invalid reference defined at \"" + ref_trace.back() + "\"");
@@ -281,15 +281,12 @@ class config {
       auto pos2 = value.find(":", pos);
       if (pos2 == string::npos) {
         auto key = value.substr(pos);
-        string string_value{get<string>(section, key, ref_trace)};
-        T result{convert<T>(string{string_value})};
-        return dereference<T>(move(section), move(key), move(string_value), move(result), ref_trace);
+        return dereference_local<T>(move(section), move(key), move(current_section), ref_trace);
       } else {
         auto key = value.substr(pos, pos2-pos);
-        auto string_value{get<string>(section, key, ref_trace)};
-        string_value = dereference<string>(move(section), move(key), string_value, string_value, ref_trace);
+        auto string_value = dereference_local<string>(move(section), move(key), move(current_section), ref_trace);
         auto base_color = rgba::get_rgba(string_value);
-        colorspaces::double3 jab(base_color);
+        double3 jab(base_color);
         colorspaces::rgb_xyz(jab, jab);
         colorspaces::xyz_jzazbz(jab, jab);
         colorspaces::ab_ch(jab, jab);
