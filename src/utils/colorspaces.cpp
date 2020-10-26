@@ -21,6 +21,12 @@ namespace colorspaces {
   string double3::to_string() const {
     return std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(c);
   }
+  
+  void double3::copy_to(rgba& dest) const {
+    dest.r = a;
+    dest.g = b;
+    dest.b = c;
+  }
 
   // source: https://observablehq.com/@jrus/srgb#srgb_to_xyz
   // source: https://observablehq.com/@jrus/jzazbz
@@ -35,9 +41,10 @@ namespace colorspaces {
   }
 
   void xyz_rgb(const double3& i, double3& o, double white_lum) {
-    o.a = gamma(+ 0.03241003232976359  *i.a - 0.015373989694887858*i.b - 0.004986158819963629  *i.c)/ white_lum;
-    o.b = gamma(- 0.009692242522025166 *i.a + 0.01875929983695176 *i.b + 0.00041554226340084706*i.c)/ white_lum;
-    o.c = gamma(+ 0.0005563941985197545*i.a - 0.0020401120612391  *i.b + 0.010571489771875336  *i.c)/ white_lum;
+    double r = i.a, g = i.b, b = i.c;
+    o.a = gamma(+ 0.03241003232976359  *r - 0.015373989694887858*g - 0.004986158819963629  *b)/ white_lum;
+    o.b = gamma(- 0.009692242522025166 *r + 0.01875929983695176 *g + 0.00041554226340084706*b)/ white_lum;
+    o.c = gamma(+ 0.0005563941985197545*r - 0.0020401120612391  *g + 0.010571489771875336  *b)/ white_lum;
   }
   
   void rgb_xyz(const double3& i, double3& o, double white_lum) {

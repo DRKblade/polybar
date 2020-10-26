@@ -1,8 +1,10 @@
 #include "common/test.hpp"
 #include "utils/colorspaces.hpp"
+#include "components/config_parser.hpp"
 
 using namespace polybar::colorspaces;
 using namespace std;
+using namespace polybar;
 
 constexpr double tolerance=0.00000001;
 
@@ -23,6 +25,13 @@ struct test_set {
     expect_near(jab2, jab, "XYZ", "Jzazbz", xyz_str);
     jzazbz_xyz(jab, xyz2);
     expect_near(xyz2, xyz, "Jzazbz", "XYZ", jab_str);
+    rgb_xyz(rgb, rgb2);
+    xyz_jzazbz(rgb2, rgb2);
+    ab_ch(rgb2, rgb2);
+    ch_ab(rgb2, rgb2);
+    jzazbz_xyz(rgb2, rgb2);
+    xyz_rgb(rgb2, rgb2);
+    expect_near(rgb, rgb2, "RGB", "Jzazbz and back", rgb_str);
   }
   void expect_near(const double3& output, const double3& expected, string from, string to, string input) {
     EXPECT_TRUE(output.is_near(expected, tolerance))
@@ -41,6 +50,7 @@ TEST(Double3, basic) {
 TEST(Color, rgb_xyz_jab) {
   test_set tests[] {
     test_set("0 0 0", "0 0 0", "0 0 0"),
+    test_set("1 1 1", "190.0857090754361 199.99999999999997 217.7800741596255", "0.22076484311386071 -0.00016356327300187656 -0.00010207018471919405"),
     test_set("1 0 0", "82.47731265059832 42.52736433546476 3.8661240304967963", "0.13354271261192754 0.11750010579770753 0.11143029691011369"),
     test_set("1 1 1", "190.0857090754361 199.99999999999997 217.7800741596255", "0.22076484311386071 -0.00016356327300187656 -0.00010207018471919405"),
     test_set("0.4980392156862745 0.24705882352941178 1", "57.149249781786736 30.57151205554765 192.0800041682566", "0.11998664741117292 0.01655935189297511 -0.14395328496691184"),
@@ -52,3 +62,10 @@ TEST(Color, rgb_xyz_jab) {
   }
 }
 
+TEST(Color, reference) {
+  logger log(loglevel::NONE);
+  string config_txt = "./test_config.ini";
+  config_parser parser(log, move(config_txt), "example");
+  config::make_type conf = parser.parse();
+  EXPECT_EQ("#80ffffff", conf.get("test", "derived-color"));
+}

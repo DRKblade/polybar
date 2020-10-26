@@ -127,17 +127,17 @@ struct rgb {
   // clang-format off
   explicit rgb(double r, double g, double b) : r(r), g(g), b(b) {}
   explicit rgb(unsigned int color) : rgb(
-      color_util::red_channel<unsigned char>(color_util::premultiply_alpha(color))   / 255.0,
-      color_util::green_channel<unsigned char>(color_util::premultiply_alpha(color)) / 255.0,
-      color_util::blue_channel<unsigned char>(color_util::premultiply_alpha(color))  / 255.0) {}
+      (color_util::red_channel<unsigned char>(color_util::premultiply_alpha(color)) + 0.5) / 256.0,
+      (color_util::green_channel<unsigned char>(color_util::premultiply_alpha(color)) + 0.5) / 256.0,
+      (color_util::blue_channel<unsigned char>(color_util::premultiply_alpha(color)) + 0.5) / 256.0) {}
   // clang-format on
 
   operator unsigned int() {
     // clang-format off
     return 0xFF << 24
-         | static_cast<int>(r * 255) << 16
-         | static_cast<int>(g * 255) << 8
-         | static_cast<int>(b * 255);
+         | math_util::cap(static_cast<int>(r * 256), 0, 255) << 16
+         | math_util::cap(static_cast<int>(g * 256), 0, 255) << 8
+         | math_util::cap(static_cast<int>(b * 256), 0, 255);
     // clang-format on
   }
 };
@@ -148,21 +148,30 @@ struct rgba {
   double b;
   double a;
 
+  static rgba get_rgba(const string& color, unsigned int fallback = 0) {
+    hsla result;
+    if(hsla::try_parse(color, result)) {
+      return result.to_rgba();
+    }
+    return rgba(color_util::parse(color, fallback));
+  }
+    
+
   // clang-format off
   explicit rgba(double r, double g, double b, double a) : r(r), g(g), b(b), a(a) {}
   explicit rgba(unsigned int color) : rgba(
-      color_util::red_channel<unsigned char>(color)   / 255.0,
-      color_util::green_channel<unsigned char>(color) / 255.0,
-      color_util::blue_channel<unsigned char>(color)  / 255.0,
-      color_util::alpha_channel<unsigned char>(color) / 255.0) {}
+      (color_util::red_channel<unsigned char>(color) + 0.5)   / 256.0,
+      (color_util::green_channel<unsigned char>(color) + 0.5) / 256.0,
+      (color_util::blue_channel<unsigned char>(color) + 0.5)  / 256.0,
+      (color_util::alpha_channel<unsigned char>(color) + 0.5) / 256.0) {}
   // clang-format on
 
   operator unsigned int() {
     // clang-format off
-    return static_cast<int>(a * 255) << 24
-         | static_cast<int>(r * 255) << 16
-         | static_cast<int>(g * 255) << 8
-         | static_cast<int>(b * 255);
+    return static_cast<int>(a * 256) << 24
+         | math_util::cap(static_cast<int>(r * 256), 0, 255) << 16
+         | math_util::cap(static_cast<int>(g * 256), 0, 255) << 8
+         | math_util::cap(static_cast<int>(b * 256), 0, 255);
     // clang-format on
   }
 };

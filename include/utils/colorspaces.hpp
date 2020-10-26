@@ -3,6 +3,7 @@
 #include <string>
 
 #include "common.hpp"
+#include "utils/color.hpp"
 
 POLYBAR_NS
 
@@ -13,9 +14,11 @@ namespace colorspaces {
 
     explicit double3(double a, double b, double c) : a(a), b(b), c(c) {}
     explicit double3(const string& str);
+    explicit double3(rgba& src) : a(src.r), b(src.g), c(src.b) {}
     double3() {}
 
     bool is_near(const double3& other, double tolerance) const;
+    void copy_to(rgba& dest) const;
     string to_string() const;
   };
 
