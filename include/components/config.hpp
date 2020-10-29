@@ -262,7 +262,7 @@ class config {
     } else if (path.compare(0, 5, "file:") == 0) {
       return dereference_file<T>(path.substr(5));
     } else if (path.compare(0, 6, "color:") == 0) {
-      return dereference_color<T>(path.substr(6), ref_trace);
+      return dereference_color<T>(path.substr(6), section, ref_trace);
     } else if ((pos = path.find(".")) != string::npos) {
       return dereference_local<T>(path.substr(0, pos), path.substr(pos + 1), section, ref_trace);
     } else {
@@ -271,77 +271,75 @@ class config {
   }
 
   template <typename T>
-  T dereference_color(string value, vector<string>& ref_trace) const {
+  T dereference_color(string value, string current_section, vector<string>& ref_trace) const {
     auto pos = value.find(".");
-    if (pos == string::npos) {
-      throw value_error("Invalid reference defined at \"" + ref_trace.back() + "\"");
+    auto pos2 = value.find(":");
+    string color;
+    if (pos == string::npos || (pos2 != string::npos && pos > pos2)) {
+			color = pos2 == string::npos ? move(value) : value.substr(0, pos2);
     } else {
       auto section = value.substr(0, pos);
       pos++;
-      auto pos2 = value.find(":", pos);
-      if (pos2 == string::npos) {
-        auto key = value.substr(pos);
-        string string_value{get<string>(section, key, ref_trace)};
-        T result{convert<T>(string{string_value})};
-        return dereference<T>(move(section), move(key), move(string_value), move(result), ref_trace);
-      } else {
-        auto key = value.substr(pos, pos2-pos);
-        auto string_value{get<string>(section, key, ref_trace)};
-        string_value = dereference<string>(move(section), move(key), string_value, string_value, ref_trace);
-        auto base_color = rgba::get_rgba(string_value);
-        colorspaces::double3 jab(base_color);
-        colorspaces::rgb_xyz(jab, jab);
-        colorspaces::xyz_jzazbz(jab, jab);
-        colorspaces::ab_ch(jab, jab);
-        bool ended;
-        do {
-          pos = pos2 + 1;
-          pos2 = value.find(":", pos);
-          if (pos2 == string::npos) {
-            pos2 = value.size();
-            ended = true;
-          } else ended = false;
-
-          // find the operator of the command
-          size_t op_pos = pos;
-          string operators = "+-*/=";
-          for (; op_pos < pos2; op_pos++) {
-            if (operators.find(value[op_pos]) != string::npos) break;
-          }
-
-          if (op_pos == pos2) {
-            throw value_error("Invalid reference defined at \"" + section + "." + key + "\"");
-          }
-
-          auto property = string_util::trim(string_util::lower(value.substr(pos, op_pos - pos)));
-          auto amount = stod(value.substr(op_pos + 1, pos2 - op_pos));
-          double* modified;
-          if (property == "lum" || property == "lightness" || property == "luminosity") {
-            modified = &jab.a;
-          } else if (property == "chroma" || property == "sat" || property == "saturation") {
-            modified = &jab.b;
-          } else if (property == "alpha" || property == "opacity") {
-            modified = &base_color.a;
-          } else {
-            throw value_error("Invalid property \"" + property + "\" defined at \"" + section + "." + key + "\"");
-          }
-
-          switch (value[op_pos]) {
-            case '+': *modified += amount; break;
-            case '-': *modified -= amount; break;
-            case '*': *modified *= amount; break;
-            case '/': *modified /= amount; break;
-            case '=': *modified = amount; break;
-            default: throw value_error("Unexpected error, this is a bug, please report!");
-          }
-        } while (!ended);
-        colorspaces::ch_ab(jab, jab);
-        colorspaces::jzazbz_xyz(jab, jab);
-        colorspaces::xyz_rgb(jab, jab);
-        jab.copy_to(base_color);
-        return convert<T>(color_util::hex<unsigned short int>(base_color));
-      }
+      auto key = pos2 == string::npos ? value.substr(pos) : value.substr(pos,pos2-pos);
+      color = dereference_local<string>(move(section), move(key), move(current_section), ref_trace);
     }
+    if (pos2 != string::npos) {
+      auto base_color = rgba::get_rgba(color);
+      double3 jab(base_color);
+      colorspaces::rgb_xyz(jab, jab);
+      colorspaces::xyz_jzazbz(jab, jab);
+      colorspaces::ab_ch(jab, jab);
+      bool ended;
+      do {
+        pos = pos2 + 1;
+        pos2 = value.find(":", pos);
+        if (pos2 == string::npos) {
+          pos2 = value.size();
+          ended = true;
+        } else ended = false;
+
+        // find the operator of the command
+        size_t op_pos = pos;
+        string operators = "+-*/=";
+        for (; op_pos < pos2; op_pos++) {
+          if (operators.find(value[op_pos]) != string::npos) break;
+        }
+
+        if (op_pos == pos2) {
+          throw value_error("Invalid color reference defined at \"" + ref_trace.back() + "\"");
+        }
+
+        auto property = string_util::trim(string_util::lower(value.substr(pos, op_pos - pos)));
+        auto amount = stod(value.substr(op_pos + 1, pos2 - op_pos));
+        double* modified;
+        if (property == "lum" || property == "lightness" || property == "luminosity") {
+          modified = &jab.a;
+        } else if (property == "chroma" || property == "sat" || property == "saturation") {
+          modified = &jab.b;
+        } else if (property == "hue") {
+          modified = &jab.c;
+        } else if (property == "alpha" || property == "opacity") {
+          modified = &base_color.a;
+        } else {
+          throw value_error("Invalid color property \"" + property + "\" defined at \"" + ref_trace.back() + "\"");
+        }
+
+        switch (value[op_pos]) {
+          case '+': *modified += amount; break;
+          case '-': *modified -= amount; break;
+          case '*': *modified *= amount; break;
+          case '/': *modified /= amount; break;
+          case '=': *modified = amount; break;
+          default: throw value_error("Unexpected error, this is a bug, please report!");
+        }
+      } while (!ended);
+      colorspaces::ch_ab(jab, jab);
+      colorspaces::jzazbz_xyz(jab, jab);
+      colorspaces::xyz_rgb(jab, jab);
+      jab.copy_to(base_color);
+      color = color_util::hex<unsigned short int>(base_color);
+    }
+    return convert<T>(move(color));
   }
 
   /**

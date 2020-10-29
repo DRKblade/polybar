@@ -62,19 +62,33 @@ namespace drawtypes {
       labels.emplace_back(forward<label_t>(load_optional_label(conf, section, name + "-" + to_string(i), names[i])));
       float percentage = static_cast<float>(i) / max_index * 100.0f;
       if (foreground_grad && !labels.back()->m_foreground.empty()) {
-        foreground_grad->add(hsla::get_hsla(labels.back()->m_foreground), percentage);
+        foreground_grad->add(labels.back()->m_foreground, percentage);
       }
       if (background_grad && !labels.back()->m_background.empty()) {
-        background_grad->add(hsla::get_hsla(labels.back()->m_background), percentage);
+        background_grad->add(labels.back()->m_background, percentage);
       }
       if (underline_grad && !labels.back()->m_underline.empty()) {
-        underline_grad->add(hsla::get_hsla(labels.back()->m_underline), percentage);
+        underline_grad->add(labels.back()->m_underline, percentage);
       }
       if (overline_grad && !labels.back()->m_overline.empty()) {
-        overline_grad->add(hsla::get_hsla(labels.back()->m_overline), percentage);
+        overline_grad->add(labels.back()->m_overline, percentage);
       }
       labels.back()->copy_undefined(tmplate);
       labels.back()->useas_token(tmplate, "%label%");
+    }
+		auto gradient_points = conf.get(section, name + "-gradient-points", 10);
+		auto colorspace = conf.get(section, name + "-gradient-colorspace", colorspaces::type::Jzazbz);
+    if (foreground_grad) {
+      foreground_grad->generate_points(gradient_points, colorspace);
+    }
+    if (background_grad) {
+      background_grad->generate_points(gradient_points, colorspace);
+    }
+    if (underline_grad) {
+      underline_grad->generate_points(gradient_points, colorspace);
+    }
+    if (overline_grad) {
+      overline_grad->generate_points(gradient_points, colorspace);
     }
   }
 }
