@@ -5,7 +5,6 @@
 
 #include "common.hpp"
 #include "utils/cache.hpp"
-#include "utils/hsla.hpp"
 #include "utils/math.hpp"
 
 POLYBAR_NS
@@ -149,10 +148,6 @@ struct rgba {
   double a;
 
   static rgba get_rgba(const string& color, unsigned int fallback = 0) {
-    hsla result;
-    if(hsla::try_parse(color, result)) {
-      return result.to_rgba();
-    }
     return rgba(color_util::parse(color, fallback));
   }
     
