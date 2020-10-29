@@ -1,5 +1,6 @@
 #include <cmath>
 #include "utils/colorspaces.hpp"
+#include "components/config.hpp"
 
 POLYBAR_NS
 
@@ -12,9 +13,9 @@ double3::double3(const string& str) {
 }
 
 bool double3::is_near(const double3& other, double tolerance) const {
-  return abs(a - other.a) <= tolerance &&
-         abs(b - other.b) <= tolerance &&
-         abs(c - other.c) <= tolerance;
+  return std::abs(a - other.a) <= tolerance &&
+         std::abs(b - other.b) <= tolerance &&
+         std::abs(c - other.c) <= tolerance;
 }
 
 string double3::to_string() const {
@@ -28,6 +29,48 @@ void double3::copy_to(rgba& dest) const {
 }
 
 namespace colorspaces {
+
+	color_error unk_colorspace(type t) {
+    return color_error("Unknown colorspace " + to_string(static_cast<int>(t)));
+	}
+
+	void upto_jzazbz(double3& data, type t) {
+  	if (t == type::Jch)
+    	ch_ab(data, data);
+  	else if (t != type::Jzazbz)
+    	throw unk_colorspace(t);
+	}
+	void downfrom_jzazbz(double3& data, type t) {
+  	if (t == type::Jch)
+    	ab_ch(data, data);
+  	else if (t != type::Jzazbz)
+    	throw unk_colorspace(t);
+	}
+	
+  void color::set_colorspace(type t) {
+    type c = colorspace;
+    colorspace = t;
+    type common = c | t;
+    if (common == type::RGB) return;
+		if ((common & ~type::Jzazbz) == type::none) {
+  		upto_jzazbz(data, c);
+  		downfrom_jzazbz(data, t);
+  		return;
+		}
+    if (c == type::RGB)
+			rgb_xyz(data, data);
+		else if ((c & ~type::Jzazbz) == type::none) {
+			upto_jzazbz(data, c);
+      jzazbz_xyz(data, data);
+    }
+    
+		if (t == type::RGB)
+  		xyz_rgb(data, data);
+		else if ((t & ~type::Jzazbz) == type::none) {
+  		xyz_jzazbz(data, data);
+  		downfrom_jzazbz(data, t);
+		}
+  }
 
   // source: https://observablehq.com/@jrus/srgb#srgb_to_xyz
   // source: https://observablehq.com/@jrus/jzazbz

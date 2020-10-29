@@ -206,4 +206,15 @@ cairo_operator_t config::convert(string&& value) const {
   return cairo::utils::str2operator(forward<string>(value), CAIRO_OPERATOR_OVER);
 }
 
+template <>
+colorspaces::type config::convert(string&& value) const {
+  string lower{string_util::lower(forward<string>(value))};
+  if (lower == "jzazbz") {
+     return colorspaces::type::Jzazbz;
+  } else if (lower == "jch") {
+     return colorspaces::type::Jch;
+  }
+  throw value_error("Invalid colorspace '" + value + "'");
+}
+
 POLYBAR_NS_END
