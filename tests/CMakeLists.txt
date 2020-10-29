@@ -50,7 +50,6 @@ configure_file(test_config.ini ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
 add_unit_test(utils/color)
 add_unit_test(utils/colorspaces)
-add_unit_test(utils/hsla)
 add_unit_test(utils/gradient)
 add_unit_test(utils/command)
 add_unit_test(utils/math unit_tests)
