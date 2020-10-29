@@ -22,4 +22,3 @@ TEST(LabelList, load) {
   EXPECT_NE(nullptr, tmplate);
   EXPECT_EQ("%label% %percentage%%", get_text(tmplate));
 }
-
