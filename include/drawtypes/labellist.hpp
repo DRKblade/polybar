@@ -3,7 +3,7 @@
 #include "common.hpp"
 #include "components/config.hpp"
 #include "drawtypes/label.hpp"
-#include "utils/gradient.hpp"
+#include "drawtypes/resources/gradient.hpp"
 #include "utils/mixins.hpp"
 
 POLYBAR_NS

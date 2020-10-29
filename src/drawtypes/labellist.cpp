@@ -43,52 +43,25 @@ namespace drawtypes {
       names = conf.get_list(section, name, {});
     }
 
-    if (conf.get(section, name + "-foreground-gradient", false)) {
-      foreground_grad = factory_util::shared<gradient>();
+		string gradient_path;
+    if (!(gradient_path = conf.get(section, name + "-foreground-gradient", static_cast<string>(""))).empty()) {
+      foreground_grad = move(load_gradient(conf, gradient_path));
     }
-    if (conf.get(section, name + "-background-gradient", false)) {
-      background_grad = factory_util::shared<gradient>();
+    if (!(gradient_path = conf.get(section, name + "-background-gradient", static_cast<string>(""))).empty()) {
+      background_grad = move(load_gradient(conf, gradient_path));
     }
-    if (conf.get(section, name + "-underline-gradient", false)) {
-      underline_grad = factory_util::shared<gradient>();
+    if (!(gradient_path = conf.get(section, name + "-underline-gradient", static_cast<string>(""))).empty()) {
+      underline_grad = move(load_gradient(conf, gradient_path));
     }
-    if (conf.get(section, name + "-overline-gradient", false)) {
-      overline_grad = factory_util::shared<gradient>();
+    if (!(gradient_path = conf.get(section, name + "-overline-gradient", static_cast<string>(""))).empty()) {
+      overline_grad = move(load_gradient(conf, gradient_path));
     }
 
     tmplate = load_label(conf, section, name, false, "%label%");
-    float max_index = static_cast<float>(names.size() - 1);
     for (size_t i = 0; i < names.size(); i++) {
       labels.emplace_back(forward<label_t>(load_optional_label(conf, section, name + "-" + to_string(i), names[i])));
-      float percentage = static_cast<float>(i) / max_index * 100.0f;
-      if (foreground_grad && !labels.back()->m_foreground.empty()) {
-        foreground_grad->add(labels.back()->m_foreground, percentage);
-      }
-      if (background_grad && !labels.back()->m_background.empty()) {
-        background_grad->add(labels.back()->m_background, percentage);
-      }
-      if (underline_grad && !labels.back()->m_underline.empty()) {
-        underline_grad->add(labels.back()->m_underline, percentage);
-      }
-      if (overline_grad && !labels.back()->m_overline.empty()) {
-        overline_grad->add(labels.back()->m_overline, percentage);
-      }
       labels.back()->copy_undefined(tmplate);
       labels.back()->useas_token(tmplate, "%label%");
-    }
-		auto gradient_points = conf.get(section, name + "-gradient-points", 10);
-		auto colorspace = conf.get(section, name + "-gradient-colorspace", colorspaces::type::Jzazbz);
-    if (foreground_grad) {
-      foreground_grad->generate_points(gradient_points, colorspace);
-    }
-    if (background_grad) {
-      background_grad->generate_points(gradient_points, colorspace);
-    }
-    if (underline_grad) {
-      underline_grad->generate_points(gradient_points, colorspace);
-    }
-    if (overline_grad) {
-      overline_grad->generate_points(gradient_points, colorspace);
     }
   }
 }

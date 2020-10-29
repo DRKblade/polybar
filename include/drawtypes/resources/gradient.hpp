@@ -4,6 +4,7 @@
 
 #include "utils/color.hpp"
 #include "utils/colorspaces.hpp"
+#include "components/config.hpp"
 
 POLYBAR_NS
 
@@ -16,6 +17,7 @@ struct color_point {
 
 class gradient {
  public:
+  gradient(vector<color_point>&& colors) : m_colors(move(colors)) {}
   string get_by_percentage(float percentage);
   rgba get_by_percentage_raw(float percentage);
   void add(string color, float position);
@@ -23,9 +25,12 @@ class gradient {
   void generate_points(size_t size, colorspaces::type colorspace);
  
  private:
-  vector<color_point> colors;
+  vector<color_point> m_colors;
+
 };
 
 using gradient_t = shared_ptr<gradient>;
+
+gradient_t load_gradient(const config& conf, const string& section);
 
 POLYBAR_NS_END
