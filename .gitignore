@@ -2,6 +2,7 @@
 /tags
 /compile_commands.json
 /config
+/googletest-src
 *.bak
 *.pyc
 *.swp
