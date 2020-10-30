@@ -19,7 +19,6 @@ struct double3 {
   explicit double3(const rgba& src);
   double3() {}
 
-  bool is_near(const double3& other, double tolerance) const;
   void copy_to(rgba& dest) const;
   string to_string() const;
 };

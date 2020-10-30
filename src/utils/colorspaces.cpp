@@ -15,12 +15,6 @@ double3::double3(const string& str) {
 
 double3::double3(const rgba& src): a(src.r), b(src.g), c(src.b) {}
 
-bool double3::is_near(const double3& other, double tolerance) const {
-  return std::abs(a - other.a) <= tolerance &&
-         std::abs(b - other.b) <= tolerance &&
-         std::abs(c - other.c) <= tolerance;
-}
-
 string double3::to_string() const {
   return std::to_string(a) + " " + std::to_string(b) + " " + std::to_string(c);
 }
@@ -146,10 +140,10 @@ namespace colorspaces {
   }
 
   void xyz_rgb(const double3& i, double3& o, double white_lum) {
-    double r = i.a, g = i.b, b = i.c;
-    o.a = gamma(+ 0.03241003232976359  *r - 0.015373989694887858*g - 0.004986158819963629  *b)/ white_lum;
-    o.b = gamma(- 0.009692242522025166 *r + 0.01875929983695176 *g + 0.00041554226340084706*b)/ white_lum;
-    o.c = gamma(+ 0.0005563941985197545*r - 0.0020401120612391  *g + 0.010571489771875336  *b)/ white_lum;
+    double x = i.a, y = i.b, z = i.c;
+    o.a = gamma(+ 0.03241003232976359  *x - 0.015373989694887858*y - 0.004986158819963629  *z) / white_lum;
+    o.b = gamma(- 0.009692242522025166 *x + 0.01875929983695176 *y + 0.00041554226340084706*z) / white_lum;
+    o.c = gamma(+ 0.0005563941985197545*x - 0.0020401120612391  *y + 0.010571489771875336  *z) / white_lum;
   }
   
   void rgb_xyz(const double3& i, double3& o, double white_lum) {
