@@ -361,20 +361,16 @@ class config {
     section = string_util::replace(section, "root", this->section(), 0, 4);
     section = string_util::replace(section, "self", current_section, 0, 4);
 
-    try {
-      string string_value{get<string>(section, key, ref_trace)};
-      T result{convert<T>(string{string_value})};
-      return dereference<T>(string(section), move(key), move(string_value), move(result), ref_trace);
-    } catch (const key_error& err) {
-      size_t pos;
-      if ((pos = key.find(':')) != string::npos) {
-        string fallback = key.substr(pos + 1);
-        m_log.info("The reference ${%s.%s} does not exist, using defined fallback value \"%s\"", section,
-            key.substr(0, pos), fallback);
-        return convert<T>(move(fallback));
-      }
-      throw value_error("The reference ${" + section + "." + key + "} does not exist (no fallback set)");
-    }
+    size_t pos;
+    string real_key, fallback;
+    if ((pos = key.find(':')) != string::npos) {
+      fallback = key.substr(pos + 1);
+      real_key = key.substr(0, pos);
+    } else real_key = move(key);
+    
+    string string_value{get<string>(section, real_key, fallback)};
+    T result{convert<T>(string{string_value})};
+    return dereference<T>(string(section), move(real_key), move(string_value), move(result), move(ref_trace));
   }
 
   /**
