@@ -190,7 +190,7 @@ void parser::codeblock(string&& data, const bar_settings& bar) {
         break;
 
       default:
-        throw unrecognized_token("Unrecognized token '" + string{tag} + "'");
+        throw unrecognized_token("Unrecognized token '" + string{tag} + "' in '" + data + "'");
     }
 
     if (!data.empty()) {

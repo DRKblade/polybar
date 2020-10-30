@@ -120,6 +120,8 @@ class config {
     }
   }
 
+  string get_color(const string& section, const string& key, const string& default_value) const;
+
   /**
    * Get list of values for the current bar by name
    */

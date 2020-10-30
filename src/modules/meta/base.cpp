@@ -91,10 +91,10 @@ namespace modules {
 
     auto format = make_unique<module_format>();
     format->value = m_conf.get(m_modname, name, move(fallback));
-    format->fg = m_conf.get(m_modname, name + "-foreground", formatdef("foreground", format->fg));
-    format->bg = m_conf.get(m_modname, name + "-background", formatdef("background", format->bg));
-    format->ul = m_conf.get(m_modname, name + "-underline", formatdef("underline", format->ul));
-    format->ol = m_conf.get(m_modname, name + "-overline", formatdef("overline", format->ol));
+    format->fg = m_conf.get_color(m_modname, name + "-foreground", formatdef("foreground", format->fg));
+    format->bg = m_conf.get_color(m_modname, name + "-background", formatdef("background", format->bg));
+    format->ul = m_conf.get_color(m_modname, name + "-underline", formatdef("underline", format->ul));
+    format->ol = m_conf.get_color(m_modname, name + "-overline", formatdef("overline", format->ol));
     format->ulsize = m_conf.get(m_modname, name + "-underline-size", formatdef("underline-size", format->ulsize));
     format->olsize = m_conf.get(m_modname, name + "-overline-size", formatdef("overline-size", format->olsize));
     format->spacing = m_conf.get(m_modname, name + "-spacing", formatdef("spacing", format->spacing));

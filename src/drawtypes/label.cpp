@@ -286,10 +286,10 @@ namespace drawtypes {
 
     // clang-format off
     return factory_util::shared<label>(text,
-        conf.get(section, name + "-foreground", ""s),
-        conf.get(section, name + "-background", ""s),
-        conf.get(section, name + "-underline", ""s),
-        conf.get(section, name + "-overline", ""s),
+        conf.get_color(section, name + "-foreground", ""s),
+        conf.get_color(section, name + "-background", ""s),
+        conf.get_color(section, name + "-underline", ""s),
+        conf.get_color(section, name + "-overline", ""s),
         conf.get(section, name + "-font", 0),
         padding,
         margin,

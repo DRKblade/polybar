@@ -30,6 +30,16 @@ string config::section() const {
   return "bar/" + m_barname;
 }
 
+string config::get_color(const string& section, const string& key, const string& default_value) const {
+  try {
+    string string_value{get<string>(section, key)};
+    return color_util::hex<unsigned short int>(color_util::parse(
+      dereference<string>(move(section), move(key), string_value, string_value)));
+  } catch (const key_error& err) {
+    return default_value;
+  }
+}
+
 void config::use_xrm() {
 #if WITH_XRM
   /*
