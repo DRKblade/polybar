@@ -10,7 +10,7 @@
 #include "utils/env.hpp"
 #include "utils/file.hpp"
 #include "utils/string.hpp"
-#include "utils/colorspaces.hpp"
+#include "utils/color.hpp"
 #if WITH_XRM
 #include "x11/xresources.hpp"
 #endif

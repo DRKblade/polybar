@@ -1,5 +1,6 @@
 #include <cmath>
 #include "utils/colorspaces.hpp"
+#include "utils/color.hpp"
 #include "components/config.hpp"
 
 POLYBAR_NS
@@ -11,6 +12,8 @@ double3::double3(const string& str) {
   b = stod(tmp = tmp.substr(sz), &sz);
   c = stod(tmp.substr(sz));
 }
+
+double3::double3(const rgba& src): a(src.r), b(src.g), c(src.b) {}
 
 bool double3::is_near(const double3& other, double tolerance) const {
   return std::abs(a - other.a) <= tolerance &&
@@ -33,44 +36,102 @@ namespace colorspaces {
 	color_error unk_colorspace(type t) {
     return color_error("Unknown colorspace " + to_string(static_cast<int>(t)));
 	}
-
-	void upto_jzazbz(double3& data, type t) {
-  	if (t == type::Jch)
-    	ch_ab(data, data);
-  	else if (t != type::Jzazbz)
-    	throw unk_colorspace(t);
-	}
-	void downfrom_jzazbz(double3& data, type t) {
-  	if (t == type::Jch)
-    	ab_ch(data, data);
-  	else if (t != type::Jzazbz)
-    	throw unk_colorspace(t);
-	}
 	
   void color::set_colorspace(type t) {
     type c = colorspace;
     colorspace = t;
     type common = c | t;
-    if (common == type::RGB) return;
-		if ((common & ~type::Jzazbz) == type::none) {
-  		upto_jzazbz(data, c);
-  		downfrom_jzazbz(data, t);
+
+#define CONTAINS(parent, node) (node & ~type::parent) == type::none
+#define SINGLE_UPTO(parent, child, transform) \
+		if (c == type::child) {										\
+  		transform(data, data);									\
+		} else if (c != type::parent) {						\
+  		throw unk_colorspace(c);								\
+		}
+#define SINGLE_DOWNFROM(parent, child, transform) \
+		if (t == type::child) {												\
+  		transform(data, data);											\
+		} else if (t != type::parent) {								\
+  		throw unk_colorspace(t);										\
+  	}
+  		
+    if (CONTAINS(RGB, common)) {
+  		SINGLE_UPTO(RGB, HSL, hsl_rgb);
+  		SINGLE_DOWNFROM(RGB, HSL, rgb_hsl);
   		return;
 		}
-    if (c == type::RGB)
+		if (CONTAINS(Jzazbz, common)) {
+  		SINGLE_UPTO(Jzazbz, Jch, ab_ch);
+  		SINGLE_DOWNFROM(Jzazbz, Jch, ch_ab);
+  		return;
+		}
+		
+    if (CONTAINS(RGB, c)) {
+  		SINGLE_UPTO(RGB, HSL, hsl_rgb);
 			rgb_xyz(data, data);
-		else if ((c & ~type::Jzazbz) == type::none) {
-			upto_jzazbz(data, c);
+		} else if (CONTAINS(Jzazbz, c)) {
+  		SINGLE_UPTO(Jzazbz, Jch, ab_ch);
       jzazbz_xyz(data, data);
+    } else if (c != type::XYZ) {
+      throw unk_colorspace(c);
     }
     
-		if (t == type::RGB)
+		if (CONTAINS(RGB, t)) {
   		xyz_rgb(data, data);
-		else if ((t & ~type::Jzazbz) == type::none) {
+  		SINGLE_DOWNFROM(RGB, HSL, rgb_hsl);
+		} else if (CONTAINS(Jzazbz, t)) {
   		xyz_jzazbz(data, data);
-  		downfrom_jzazbz(data, t);
+  		SINGLE_DOWNFROM(Jzazbz, Jch, ch_ab);
+		} else if (t != type::XYZ) {
+      throw unk_colorspace(t);
 		}
+#undef SINGLE_UPTO
+#undef SINGLE_DOWNFROM
+#undef CONTAINS
   }
+
+	void rgb_hsl(const double3& input, double3& output) {
+    double r = input.a, g = input.b, b = input.c;
+    double max = math_util::max(r, math_util::max(g, b)),
+    			 min = math_util::min(r, math_util::min(g, b));
+    output.c = (max + min) / 2;
+
+    if (max == min) {
+      output.a = output.b = 0;
+    } else {
+      auto d = max - min;
+      output.b = output.c > 0.5 ? d / (2 - max - min) : d / (max + min);
+      if (max == r)
+        output.a = (g - b) / d + (g < b ? 6 : 0);
+      else if (max == g)
+        output.a = (b - r) / d + 2;
+      else output.a = (r - g) / d + 4;
+      output.a *= 60;
+    }
+	}
+	
+	void hsl_rgb(const double3& input, double3& output) {
+  	double h = input.a, s = input.b, l = input.c;
+		if (input.b == 0.0) {
+      output.a = output.b = output.c = l;
+    } else {
+      const auto hue2rgb = [&](double p, double q, double t) {
+        if (t < 0.0) t += 360.0;
+        if (t > 360.0) t -= 360.0;
+        if (t < 60.0) return p + (q - p) * t/60.0;
+        if (t < 180.0) return q;
+        if (t < 240.0) return p + (q - p) * (240.0 - t)/60.0;
+        return p;
+      };
+
+      auto q = l < 0.5 ? l * (1.0 + s) : l + s - l * s;
+      auto p = 2.0 * l - q;
+      output.a = hue2rgb(p, q, h + 120.0);
+      output.b = hue2rgb(p, q, h);
+      output.c = hue2rgb(p, q, h - 120.0);
+    }
+	}
 
   // source: https://observablehq.com/@jrus/srgb#srgb_to_xyz
   // source: https://observablehq.com/@jrus/jzazbz

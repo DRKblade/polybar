@@ -3,7 +3,6 @@
 
 #include "cairo/utils.hpp"
 #include "components/config.hpp"
-#include "utils/color.hpp"
 #include "utils/env.hpp"
 #include "utils/factory.hpp"
 #include "utils/string.hpp"
@@ -198,7 +197,7 @@ chrono::duration<double> config::convert(string&& value) const {
 
 template <>
 rgba config::convert(string&& value) const {
-  return rgba{color_util::parse(value, 0)};
+  return rgba::get_rgba(value);
 }
 
 template <>

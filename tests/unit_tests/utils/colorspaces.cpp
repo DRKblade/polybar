@@ -1,5 +1,5 @@
 #include "common/test.hpp"
-#include "utils/colorspaces.hpp"
+#include "utils/color.hpp"
 #include "components/config_parser.hpp"
 
 using namespace polybar::colorspaces;
@@ -39,6 +39,11 @@ struct test_set {
       << "Input: " << input << "\nOutput: " << output.to_string() << "\nExpected: " << expected.to_string();
   }
 };
+
+TEST(Color, Parse) {
+   EXPECT_EQ(0xffff0000, color_util::parse("#FF0000"));
+   EXPECT_EQ(0xffff0000, color_util::parse("hsl(0, 1, 0.5)"));
+}
 
 TEST(Double3, basic) {
   double3 tmp("0.321 159 200");

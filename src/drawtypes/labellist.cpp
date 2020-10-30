@@ -45,16 +45,16 @@ namespace drawtypes {
 
 		string gradient_path;
     if (!(gradient_path = conf.get(section, name + "-foreground-gradient", static_cast<string>(""))).empty()) {
-      foreground_grad = move(load_gradient(conf, gradient_path));
+      foreground_grad = load_gradient(conf, gradient_path);
     }
     if (!(gradient_path = conf.get(section, name + "-background-gradient", static_cast<string>(""))).empty()) {
-      background_grad = move(load_gradient(conf, gradient_path));
+      background_grad = load_gradient(conf, gradient_path);
     }
     if (!(gradient_path = conf.get(section, name + "-underline-gradient", static_cast<string>(""))).empty()) {
-      underline_grad = move(load_gradient(conf, gradient_path));
+      underline_grad = load_gradient(conf, gradient_path);
     }
     if (!(gradient_path = conf.get(section, name + "-overline-gradient", static_cast<string>(""))).empty()) {
-      overline_grad = move(load_gradient(conf, gradient_path));
+      overline_grad = load_gradient(conf, gradient_path);
     }
 
     tmplate = load_label(conf, section, name, false, "%label%");
