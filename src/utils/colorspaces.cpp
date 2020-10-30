@@ -56,8 +56,8 @@ namespace colorspaces {
   		return;
 		}
 		if (CONTAINS(Jzazbz, common)) {
-  		SINGLE_UPTO(Jzazbz, Jch, ab_ch);
-  		SINGLE_DOWNFROM(Jzazbz, Jch, ch_ab);
+  		SINGLE_UPTO(Jzazbz, Jch, ch_ab);
+  		SINGLE_DOWNFROM(Jzazbz, Jch, ab_ch);
   		return;
 		}
 		
@@ -65,7 +65,7 @@ namespace colorspaces {
   		SINGLE_UPTO(RGB, HSL, hsl_rgb);
 			rgb_xyz(data, data);
 		} else if (CONTAINS(Jzazbz, c)) {
-  		SINGLE_UPTO(Jzazbz, Jch, ab_ch);
+  		SINGLE_UPTO(Jzazbz, Jch, ch_ab);
       jzazbz_xyz(data, data);
     } else if (c != type::XYZ) {
       throw unk_colorspace(c);
@@ -76,7 +76,7 @@ namespace colorspaces {
   		SINGLE_DOWNFROM(RGB, HSL, rgb_hsl);
 		} else if (CONTAINS(Jzazbz, t)) {
   		xyz_jzazbz(data, data);
-  		SINGLE_DOWNFROM(Jzazbz, Jch, ch_ab);
+  		SINGLE_DOWNFROM(Jzazbz, Jch, ab_ch);
 		} else if (t != type::XYZ) {
       throw unk_colorspace(t);
 		}
