@@ -23,13 +23,12 @@ class parser {
 
  public:
   explicit parser(signal_emitter& emitter);
-  void parse(const bar_settings& bar, string data);
+  void parse(string data);
 
  protected:
-  void codeblock(string&& data, const bar_settings& bar);
+  void codeblock(string&& data);
   size_t text(string&& data);
 
-  static unsigned int parse_color(const string& s, unsigned int fallback = 0);
   static int parse_fontindex(const string& s);
   static attribute parse_attr(const char attr);
   mousebtn parse_action_btn(const string& data);

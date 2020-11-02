@@ -81,19 +81,12 @@ namespace color_util {
     }());
   }
 
-  inline string parse_hex(string hex) {
-    if (hex[0] != '#')
-      hex.insert(0, 1, '#');
-    if (hex.length() == 4)
-      hex = {'#', hex[1], hex[1], hex[2], hex[2], hex[3], hex[3]};
-    if (hex.length() == 7)
-      hex = "#ff" + hex.substr(1);
-    if (hex.length() != 9)
-      return "";
-    return hex;
-  }
+  bool parse_hex(string& hex);
 
-  unsigned int parse(string value, unsigned int fallback = 0);
+	string colorspace_torgb(string&& value);
+  bool check(string value, unsigned int& result);
+  unsigned int parse(const string& value, unsigned int fallback);
+  unsigned int parse(const string& value);
 
   inline string simplify_hex(string hex) {
     // convert #ffrrggbb to #rrggbb
@@ -111,8 +104,6 @@ namespace color_util {
   }
 }
 
-          
-    
 struct rgb {
   double r;
   double g;
@@ -142,11 +133,11 @@ struct rgba {
   double b;
   double a;
 
-  static rgba get_rgba(const string& color, unsigned int fallback = 0) {
-    return rgba(color_util::parse(color, fallback));
+  static rgba get_rgba(const string& color) {
+    return rgba(color_util::parse(color));
   }
+  static bool parse(const string& value, rgba& result);
     
-
   // clang-format off
   explicit rgba(double r, double g, double b, double a) : r(r), g(g), b(b), a(a) {}
   explicit rgba(unsigned int color) : rgba(

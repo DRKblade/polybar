@@ -5,6 +5,7 @@
 
 #include "common.hpp"
 #include "components/logger.hpp"
+#include "drawtypes/resources/gradient.hpp"
 #include "errors.hpp"
 #include "settings.hpp"
 #include "utils/env.hpp"
@@ -45,6 +46,8 @@ class config {
   void set_included(file_list included);
 
   void warn_deprecated(const string& section, const string& key, string replacement) const;
+
+  gradient_t get_gradient(const string& name) const;
 
   /**
    * Returns true if a given parameter exists
@@ -482,6 +485,7 @@ class config {
   string m_file;
   string m_barname;
   sectionmap_t m_sections{};
+  mutable map<string,gradient_t> m_gradients;
 
   /**
    * Absolute path of all files that were parsed in the process of parsing the

@@ -29,18 +29,22 @@ parser::parser(signal_emitter& emitter) : m_sig(emitter) {}
 /**
  * Process input string
  */
-void parser::parse(const bar_settings& bar, string data) {
+void parser::parse(string data) {
+  try{
   while (!data.empty()) {
     size_t pos{string::npos};
 
     if (data.compare(0, 2, "%{") == 0 && (pos = data.find('}')) != string::npos) {
-      codeblock(data.substr(2, pos - 2), bar);
+      codeblock(data.substr(2, pos - 2));
       data.erase(0, pos + 1);
     } else if ((pos = data.find("%{")) != string::npos) {
       data.erase(0, text(data.substr(0, pos)));
     } else {
       data.erase(0, text(data.substr(0)));
     }
+  }
+  }catch(std::exception e) {
+    throw application_error(data+"\n\n");
   }
 
   if (!m_actions.empty()) {
@@ -51,7 +55,7 @@ void parser::parse(const bar_settings& bar, string data) {
 /**
  * Process contents within tag blocks, i.e: %{...}
  */
-void parser::codeblock(string&& data, const bar_settings& bar) {
+void parser::codeblock(string&& data) {
   size_t pos;
 
   while (data.length()) {
@@ -102,11 +106,11 @@ void parser::codeblock(string&& data, const bar_settings& bar) {
 
     switch (tag) {
       case 'B':
-        m_sig.emit(change_background{parse_color(value, bar.background)});
+        m_sig.emit(change_background{string(value)});
         break;
 
       case 'F':
-        m_sig.emit(change_foreground{parse_color(value, bar.foreground)});
+        m_sig.emit(change_foreground{string(value)});
         break;
 
       case 'T':
@@ -114,16 +118,16 @@ void parser::codeblock(string&& data, const bar_settings& bar) {
         break;
 
       case 'U':
-        m_sig.emit(change_underline{parse_color(value, bar.underline.color)});
-        m_sig.emit(change_overline{parse_color(value, bar.overline.color)});
+        m_sig.emit(change_underline{string(value)});
+        m_sig.emit(change_overline{string(value)});
         break;
 
       case 'u':
-        m_sig.emit(change_underline{parse_color(value, bar.underline.color)});
+        m_sig.emit(change_underline{string(value)});
         break;
 
       case 'o':
-        m_sig.emit(change_overline{parse_color(value, bar.overline.color)});
+        m_sig.emit(change_overline{string(value)});
         break;
 
       case 'R':
@@ -137,7 +141,6 @@ void parser::codeblock(string&& data, const bar_settings& bar) {
       case 'l':
         m_sig.emit(change_alignment{alignment::LEFT});
         break;
-
       case 'c':
         m_sig.emit(change_alignment{alignment::CENTER});
         break;
@@ -213,16 +216,6 @@ size_t parser::text(string&& data) {
 
   m_sig.emit(signals::parser::text{forward<string>(data)});
   return data.size();
-}
-
-/**
- * Process color hex string and convert it to the correct value
- */
-unsigned int parser::parse_color(const string& s, unsigned int fallback) {
-  if (!s.empty() && s[0] != '-') {
-    return color_util::parse(s, fallback);
-  }
-  return fallback;
 }
 
 /**

@@ -33,8 +33,8 @@ string config::section() const {
 string config::get_color(const string& section, const string& key, const string& default_value) const {
   try {
     string string_value{get<string>(section, key)};
-    return color_util::hex<unsigned short int>(color_util::parse(
-      dereference<string>(move(section), move(key), string_value, string_value)));
+    return color_util::colorspace_torgb(
+      dereference<string>(move(section), move(key), string_value, string_value));
   } catch (const key_error& err) {
     return default_value;
   }
@@ -56,6 +56,16 @@ void config::use_xrm() {
 void config::set_sections(sectionmap_t sections) {
   m_sections = move(sections);
   copy_inherited();
+}
+
+gradient_t config::get_gradient(const string& name) const {
+  auto it = m_gradients.find(name);
+  if (it == m_gradients.end()) {
+    auto result = load_gradient(*this, "gradient/" + name);
+    m_gradients[name] = result;
+    return result;
+  }
+  return it->second;
 }
 
 void config::set_included(file_list included) {

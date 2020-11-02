@@ -16,6 +16,13 @@ POLYBAR_NS
 
 static constexpr double BLOCK_GAP{20.0};
 
+void textblock::update(int frame) {
+  if (bg_anim) block.bg = bg_anim->get(frame);
+  if (fg_anim) fg = fg_anim->get(frame);
+  if (ul_anim) ul = ul_anim->get(frame);
+  if (ol_anim) ol = ol_anim->get(frame);
+}
+
 /**
  * Create instance
  */
@@ -38,8 +45,8 @@ renderer::renderer(connection& conn, signal_emitter& sig, const config& conf, co
     const bar_settings& bar, background_manager& background)
     : m_connection(conn)
     , m_sig(sig)
-    , m_conf(conf)
     , m_log(logger)
+    , m_conf(conf)
     , m_bar(forward<const bar_settings&>(bar))
     , m_rect(m_bar.inner_area()) {
   m_sig.attach(this);
@@ -213,10 +220,10 @@ void renderer::begin(xcb_rectangle_t rect) {
   m_align = alignment::NONE;
 
   // Reset colors
-  m_bg = m_bar.background;
-  m_fg = m_bar.foreground;
-  m_ul = m_bar.underline.color;
-  m_ol = m_bar.overline.color;
+  m_bg = "";
+  m_fg = "";
+  m_ul = "";
+  m_ol = "";
 
   // Clear canvas
   m_context->save();
@@ -593,32 +600,28 @@ void renderer::fill_background() {
 /**
  * Fill overline color
  */
-void renderer::fill_overline(double x, double w) {
-  if (m_bar.overline.size && m_attr.test(static_cast<int>(attribute::OVERLINE))) {
-    m_log.trace_x("renderer: overline(x=%f, w=%f)", x, w);
-    m_context->save();
-    *m_context << m_comp_ol;
-    *m_context << m_ol;
-    *m_context << cairo::rect{x, static_cast<double>(m_rect.y), w, static_cast<double>(m_bar.overline.size)};
-    m_context->fill();
-    m_context->restore();
-  }
+void renderer::fill_overline(double x, double w, unsigned int color) {
+  m_log.trace_x("renderer: overline(x=%f, w=%f)", x, w);
+  m_context->save();
+  *m_context << m_comp_ol;
+  *m_context << color;
+  *m_context << cairo::rect{x, static_cast<double>(m_rect.y), w, static_cast<double>(m_bar.overline.size)};
+  m_context->fill();
+  m_context->restore();
 }
 
 /**
  * Fill underline color
  */
-void renderer::fill_underline(double x, double w) {
-  if (m_bar.underline.size && m_attr.test(static_cast<int>(attribute::UNDERLINE))) {
-    m_log.trace_x("renderer: underline(x=%f, w=%f)", x, w);
-    m_context->save();
-    *m_context << m_comp_ul;
-    *m_context << m_ul;
-    *m_context << cairo::rect{x, static_cast<double>(m_rect.y + m_rect.height - m_bar.underline.size), w,
-        static_cast<double>(m_bar.underline.size)};
-    m_context->fill();
-    m_context->restore();
-  }
+void renderer::fill_underline(double x, double w, unsigned int color) {
+  m_log.trace_x("renderer: underline(x=%f, w=%f)", x, w);
+  m_context->save();
+  *m_context << m_comp_ul;
+  *m_context << color;
+  *m_context << cairo::rect{x, static_cast<double>(m_rect.y + m_rect.height - m_bar.underline.size), w,
+      static_cast<double>(m_bar.underline.size)};
+  m_context->fill();
+  m_context->restore();
 }
 
 /**
@@ -667,48 +670,78 @@ void renderer::fill_borders() {
   m_context->restore();
 }
 
+void renderer::parse_color(const string& value, unsigned int& color, animated_color_t& anim_color, unsigned int fallback) {
+  if (value.compare(0, 5, "anim:") == 0) {
+    color = 0;
+    anim_color = parse_animated_color(m_conf, value.substr(5));
+  } else if (!value.empty() && value[0] != '-') {
+    anim_color = nullptr;
+		color = color_util::parse(value, fallback);
+  } else {
+    anim_color = nullptr;
+    color = fallback;
+  }
+}
+
+/**
+ * Copy contents and settings to a textblock
+ */
+void renderer::make_textblock(textblock& b, const string& contents) {
+  b.origin.x = m_rect.x + m_blocks[m_align].x;
+  b.origin.y = m_rect.y + m_rect.height / 2.0;
+  b.block.align = m_align;
+  b.block.contents = contents;
+  b.block.font = m_font;
+  b.block.x_advance = &m_blocks[m_align].x;
+  b.block.y_advance = &m_blocks[m_align].y;
+  b.block.bg_rect = cairo::rect{0.0, 0.0, 0.0, 0.0};
+  
+  b.dx = m_rect.x + m_blocks[m_align].x - b.origin.x;
+  parse_color(m_fg, b.fg, b.fg_anim, m_bar.foreground);
+  parse_color(m_bg, b.block.bg, b.bg_anim, m_bar.background);
+	if (m_bar.underline.size && b.dx > 0.0 && m_attr.test(static_cast<int>(attribute::UNDERLINE))) {
+  	parse_color(m_ul, b.ul, b.ul_anim, m_bar.underline.color);
+	}
+	if (m_bar.overline.size && b.dx > 0.0 && m_attr.test(static_cast<int>(attribute::OVERLINE))) {
+  	parse_color(m_ol, b.ol, b.ol_anim, m_bar.overline.color);
+	}
+
+  // Only draw text background if the color differs from
+  // the background color of the bar itself
+  // Note: this means that if the user explicitly set text
+  // background color equal to background-0 it will be ignored
+  if (b.block.bg != m_bar.background) {
+    b.block.bg_operator = m_comp_bg;
+    b.block.bg_rect.x = m_rect.x;
+    b.block.bg_rect.y = m_rect.y;
+    b.block.bg_rect.h = m_rect.height;
+  } else b.block.bg = 0;
+}
+
 /**
  * Draw text contents
  */
 void renderer::draw_text(const string& contents) {
   m_log.trace_x("renderer: text(%s)", contents.c_str());
 
-  cairo::abspos origin{};
-  origin.x = m_rect.x + m_blocks[m_align].x;
-  origin.y = m_rect.y + m_rect.height / 2.0;
+  textblock b{};
+	make_textblock(b, contents);
+	draw_textblock(b);
+	if (b.bg_anim || b.fg_anim || b.ol_anim || b.ul_anim) {
+		m_textblocks.push_back(b);
+	}
+}
 
-  cairo::textblock block{};
-  block.align = m_align;
-  block.contents = contents;
-  block.font = m_font;
-  block.x_advance = &m_blocks[m_align].x;
-  block.y_advance = &m_blocks[m_align].y;
-  block.bg_rect = cairo::rect{0.0, 0.0, 0.0, 0.0};
-
-  // Only draw text background if the color differs from
-  // the background color of the bar itself
-  // Note: this means that if the user explicitly set text
-  // background color equal to background-0 it will be ignored
-  if (m_bg != m_bar.background) {
-    block.bg = m_bg;
-    block.bg_operator = m_comp_bg;
-    block.bg_rect.x = m_rect.x;
-    block.bg_rect.y = m_rect.y;
-    block.bg_rect.h = m_rect.height;
-  }
-
-  m_context->save();
-  *m_context << origin;
+void renderer::draw_textblock(textblock& block) {
+	block.update(m_frame);
+	m_context->save();
+  *m_context << block.origin;
   *m_context << m_comp_fg;
-  *m_context << m_fg;
-  *m_context << block;
+  *m_context << block.fg;
+  *m_context << block.block;
   m_context->restore();
-
-  double dx = m_rect.x + m_blocks[m_align].x - origin.x;
-  if (dx > 0.0) {
-    fill_underline(origin.x, dx);
-    fill_overline(origin.x, dx);
-  }
+  if (block.ul != 0) fill_overline(block.origin.x, block.dx, block.ul);
+  if (block.ol != 0) fill_underline(block.origin.x, block.dx, block.ol);
 }
 
 /**
@@ -742,36 +775,36 @@ bool renderer::on(const signals::ui::request_snapshot& evt) {
 }
 
 bool renderer::on(const signals::parser::change_background& evt) {
-  const unsigned int color{evt.cast()};
+  const auto color{evt.cast()};
   if (color != m_bg) {
-    m_log.trace_x("renderer: change_background(#%08x)", color);
+    m_log.trace_x("renderer: change_background(%s)", color);
     m_bg = color;
   }
   return true;
 }
 
 bool renderer::on(const signals::parser::change_foreground& evt) {
-  const unsigned int color{evt.cast()};
+  const auto color{evt.cast()};
   if (color != m_fg) {
-    m_log.trace_x("renderer: change_foreground(#%08x)", color);
+    m_log.trace_x("renderer: change_foreground(%s)", color);
     m_fg = color;
   }
   return true;
 }
 
 bool renderer::on(const signals::parser::change_underline& evt) {
-  const unsigned int color{evt.cast()};
+  const auto color{evt.cast()};
   if (color != m_ul) {
-    m_log.trace_x("renderer: change_underline(#%08x)", color);
+    m_log.trace_x("renderer: change_underline(%s)", color);
     m_ul = color;
   }
   return true;
 }
 
 bool renderer::on(const signals::parser::change_overline& evt) {
-  const unsigned int color{evt.cast()};
+  const auto color{evt.cast()};
   if (color != m_ol) {
-    m_log.trace_x("renderer: change_overline(#%08x)", color);
+    m_log.trace_x("renderer: change_overline(%s)", color);
     m_ol = color;
   }
   return true;
@@ -809,9 +842,9 @@ bool renderer::on(const signals::parser::change_alignment& evt) {
 
 bool renderer::on(const signals::parser::reverse_colors&) {
   m_log.trace_x("renderer: reverse_colors");
-  m_fg = m_fg + m_bg;
-  m_bg = m_fg - m_bg;
-  m_fg = m_fg - m_bg;
+  auto tmp = m_fg;
+  m_fg = m_bg;
+  m_bg = tmp;
   return true;
 }
 
@@ -880,10 +913,10 @@ bool renderer::on(const signals::parser::control& evt) {
 
   switch (ctrl) {
     case controltag::R:
-      m_bg = m_bar.background;
-      m_fg = m_bar.foreground;
-      m_ul = m_bar.underline.color;
-      m_ol = m_bar.overline.color;
+      m_bg = "";
+      m_fg = "";
+      m_ul = "";
+      m_ol = "";
       m_font = 0;
       m_attr.reset();
       break;

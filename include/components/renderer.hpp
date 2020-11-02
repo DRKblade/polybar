@@ -5,8 +5,10 @@
 #include <memory>
 
 #include "cairo/fwd.hpp"
+#include "cairo/context.hpp"
 #include "common.hpp"
 #include "components/types.hpp"
+#include "drawtypes/resources/animated_color.hpp"
 #include "events/signal_fwd.hpp"
 #include "events/signal_receiver.hpp"
 #include "x11/extensions/fwd.hpp"
@@ -28,6 +30,23 @@ struct alignment_block {
   cairo_pattern_t* pattern;
   double x;
   double y;
+};
+
+struct textblock {
+  cairo::textblock block{};
+  cairo::abspos origin{};
+  unsigned int fg;
+  unsigned int ol;
+  unsigned int ul;
+  double dx;
+  animated_color_t fg_anim;
+  animated_color_t bg_anim;
+  animated_color_t ul_anim;
+  animated_color_t ol_anim;
+	bool has_ol;
+	bool has_ul;
+
+  void update(int frame);
 };
 
 class renderer
@@ -56,8 +75,8 @@ class renderer
   void reserve_space(edge side, unsigned int w);
 #endif
   void fill_background();
-  void fill_overline(double x, double w);
-  void fill_underline(double x, double w);
+  void fill_overline(double x, double w, unsigned int color);
+  void fill_underline(double x, double w, unsigned int color);
   void fill_borders();
   void draw_text(const string& contents);
 
@@ -69,6 +88,9 @@ class renderer
 
   void flush(alignment a);
   void highlight_clickable_areas();
+  void make_textblock(textblock& b, const string& contents);
+  void draw_textblock(textblock& block);
+  void parse_color(const string& value, unsigned int& color, animated_color_t& anim_color, unsigned int fallback);
 
   bool on(const signals::ui::request_snapshot& evt);
   bool on(const signals::parser::change_background& evt);
@@ -96,8 +118,8 @@ class renderer
  private:
   connection& m_connection;
   signal_emitter& m_sig;
-  const config& m_conf;
   const logger& m_log;
+  const config& m_conf;
   const bar_settings& m_bar;
   std::shared_ptr<bg_slice> m_background;
 
@@ -128,11 +150,13 @@ class renderer
   alignment m_align;
   std::bitset<3> m_attr;
   int m_font{0};
-  unsigned int m_bg{0U};
-  unsigned int m_fg{0U};
-  unsigned int m_ol{0U};
-  unsigned int m_ul{0U};
+  int m_frame;
+  string m_bg{0U};
+  string m_fg{0U};
+  string m_ol{0U};
+  string m_ul{0U};
   vector<action_block> m_actions;
+  vector<textblock> m_textblocks;
 
   bool m_fixedcenter;
   string m_snapshot_dst;

@@ -5,6 +5,7 @@
 #include "components/ipc.hpp"
 #include "components/parser.hpp"
 #include "components/types.hpp"
+#include "drawtypes/resources/animated_color.hpp"
 #include "utils/functional.hpp"
 
 POLYBAR_NS
@@ -131,16 +132,16 @@ namespace signals {
   }  // namespace ui_tray
 
   namespace parser {
-    struct change_background : public detail::value_signal<change_background, unsigned int> {
+    struct change_background : public detail::value_signal<change_background, string> {
       using base_type::base_type;
     };
-    struct change_foreground : public detail::value_signal<change_foreground, unsigned int> {
+    struct change_foreground : public detail::value_signal<change_foreground, string> {
       using base_type::base_type;
     };
-    struct change_underline : public detail::value_signal<change_underline, unsigned int> {
+    struct change_underline : public detail::value_signal<change_underline, string> {
       using base_type::base_type;
     };
-    struct change_overline : public detail::value_signal<change_overline, unsigned int> {
+    struct change_overline : public detail::value_signal<change_overline, string> {
       using base_type::base_type;
     };
     struct change_font : public detail::value_signal<change_font, int> {

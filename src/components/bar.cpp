@@ -352,9 +352,11 @@ void bar::parse(string&& data, bool force) {
   m_renderer->begin(rect);
 
   try {
-    m_parser->parse(settings(), data);
+    m_parser->parse(data);
   } catch (const parser_error& err) {
-    m_log.err("Failed to parse contents (reason: %s)", err.what());
+    m_log.err("Failed to parse contents (reason: %s)\nContent: %s", err.what(), data);
+  } catch (const application_error& err) {
+    m_log.err("Failed to render contents (reason: %s)\nContent: %s", err.what(), data);
   }
 
   m_renderer->end();

@@ -4,9 +4,10 @@
 
 #include "utils/color.hpp"
 #include "utils/colorspaces.hpp"
-#include "components/config.hpp"
 
 POLYBAR_NS
+
+class config;
 
 struct color_point {
   rgba color;
@@ -19,12 +20,12 @@ class gradient {
  public:
   gradient(vector<color_point>&& colors) : m_colors(move(colors)) {}
   string get_by_percentage(float percentage);
-  rgba get_by_percentage_raw(float percentage);
+  unsigned int get_by_percentage_raw(float percentage);
   void add(string color, float position);
   static rgba interpolate(const rgba& min, const rgba& max, float percentage);
   void generate_points(size_t size, colorspaces::type colorspace);
  
- private:
+ protected:
   vector<color_point> m_colors;
 
 };
