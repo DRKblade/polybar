@@ -1,15 +1,15 @@
 #include <cmath>
 
+#include "drawtypes/resources/gradient.hpp"
 #include "errors.hpp"
 #include "components/config.hpp"
-#include "drawtypes/resources/gradient.hpp"
 
 POLYBAR_NS
 
 void gradient::add(string color, float percentage) {
   rgba c = rgba::get_rgba(color);
   if (!m_colors.empty() && m_colors.back().position > percentage)
-    throw application_error("Position of color points must be in ascending order");
+    throw value_error("Position of color points must be in ascending order");
   m_colors.emplace_back(color_point(c, percentage));
 }
 
@@ -17,7 +17,7 @@ string gradient::get_by_percentage(float percentage) {
   return color_util::hex<unsigned short int>(get_by_percentage_raw(percentage));
 }
 
-unsigned int gradient::get_by_percentage_raw(float percentage) {
+rgba gradient::get_by_percentage_raw(float percentage) {
   if (m_colors.size() == 0) {
     throw color_error("Gradient have no color point");
   }
@@ -53,7 +53,7 @@ void gradient::generate_points(size_t size, colorspaces::type colorspace) {
   vector<color_point> new_color;
   for (size_t i = 0; i < size; i++) {
     float percentage = math_util::percentage<float>(i, 0, size-1);
-    color_point point(rgba(get_by_percentage_raw(percentage)), percentage);
+    color_point point(get_by_percentage_raw(percentage), percentage);
     colorspaces::color tmp(point.color, colorspace);
     tmp.set_colorspace(colorspaces::type::RGB);
     tmp.data.copy_to(point.color);
@@ -70,7 +70,7 @@ gradient_t load_gradient(const config& conf, const string& section) {
 		float percentage = static_cast<float>(i) * index_multiplier;
 		percentage = conf.get(section, "point-" + to_string(i) + "-position", percentage);
 		if (!colors.empty() && percentage < colors.back().position)
-  		throw application_error("Position of color point at "
+  		throw value_error("Position of color point at "
   			+ section + "." + "point-" + to_string(i) + "-position must be in ascending order");
 		colors.emplace_back(color_point(rgba::get_rgba(points[i]), percentage));
   }

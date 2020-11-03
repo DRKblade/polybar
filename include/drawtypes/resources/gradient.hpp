@@ -20,12 +20,12 @@ class gradient {
  public:
   gradient(vector<color_point>&& colors) : m_colors(move(colors)) {}
   string get_by_percentage(float percentage);
-  unsigned int get_by_percentage_raw(float percentage);
+  rgba get_by_percentage_raw(float percentage);
   void add(string color, float position);
   static rgba interpolate(const rgba& min, const rgba& max, float percentage);
   void generate_points(size_t size, colorspaces::type colorspace);
  
- protected:
+ private:
   vector<color_point> m_colors;
 
 };
