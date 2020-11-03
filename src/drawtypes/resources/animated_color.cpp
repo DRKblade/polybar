@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "drawtypes/resources/animated_color.hpp"
 #include "utils/factory.hpp"
 #include "utils/math.hpp"
@@ -12,19 +14,19 @@ animated_color_t parse_animated_color(const config& conf, const string& value) {
     auto pos2 = value.find(':', ++pos);
 		if (pos2 != string::npos) {
     	return factory_util::shared<animated_color>(
-      	conf.get_gradient(gradient), stoi(value.substr(pos, pos2 - pos)), stoi(value.substr(pos2 + 1)));
+      	conf.get_gradient(gradient), stod(value.substr(pos, pos2 - pos)), stod(value.substr(pos2 + 1)));
 		}
   	return factory_util::shared<animated_color>(
-    	conf.get_gradient(gradient), stoi(value.substr(pos)));
+    	conf.get_gradient(gradient), stod(value.substr(pos)));
   }
 	return factory_util::shared<animated_color>(
   	conf.get_gradient(value));
 }
 
-unsigned int animated_color::get(size_t frame) {
-  auto percentage = math_util::percentage(
-    static_cast<float>((m_offset + frame) % m_framecount), 0.0f, static_cast<float>(m_framecount));
-  return m_gradient->get_by_percentage_raw(percentage);
+unsigned int animated_color::get(double time) {
+  auto percentage = time / m_duration + m_offset;
+  return m_gradient->get_by_percentage_raw(
+    static_cast<float>(percentage - (long)percentage) * 100.0f);
 }
 
 POLYBAR_NS_END

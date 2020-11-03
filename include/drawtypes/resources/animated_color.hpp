@@ -7,17 +7,17 @@ POLYBAR_NS
 
 class animated_color {
  public:
-  animated_color(gradient_t&& gradient, size_t framecount = 10, size_t offset = 0)
+  animated_color(gradient_t&& gradient, double duration = 2, double offset = 0)
   	: m_gradient(move(gradient)),
-  	  m_framecount(framecount),
+  	  m_duration(duration),
   	  m_offset(offset) {}
 
-  unsigned int get(size_t frame);
+  unsigned int get(double time);
 
  protected:
   gradient_t m_gradient;
-  size_t m_framecount;
-  size_t m_offset;
+  double m_duration;
+  double m_offset;
 };
 
 using animated_color_t = shared_ptr<animated_color>;

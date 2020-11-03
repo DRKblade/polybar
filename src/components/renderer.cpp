@@ -38,8 +38,8 @@ renderer::renderer(connection& conn, signal_emitter& sig, const config& conf, co
     const bar_settings& bar, background_manager& background)
     : m_connection(conn)
     , m_sig(sig)
-    , m_log(logger)
     , m_conf(conf)
+    , m_log(logger)
     , m_bar(forward<const bar_settings&>(bar))
     , m_rect(m_bar.inner_area()) {
   m_sig.attach(this);
@@ -668,7 +668,7 @@ void renderer::fill_borders() {
 unsigned int renderer::parse_color(const string& value, unsigned int fallback) {
   if (value.compare(0, 5, "anim:") == 0) {
     m_anim_used = true;
-    return parse_animated_color(m_conf, value.substr(5))->get(m_frame);
+    return parse_animated_color(m_conf, value.substr(5))->get(m_time);
   }
   if (!value.empty() && value[0] != '-') {
 		return color_util::parse(value, fallback);
@@ -720,7 +720,10 @@ void renderer::draw_text(const string& contents) {
 void renderer::increment_subframe(unsigned int& framerate) {
   if (m_anim_used) {
     framerate = m_framerate_ms;
+    // Count frames using an unsigned int because it will loop back when overflow
+    // Doubles don't have that behavior
     m_frame++;
+    m_time = m_frame * 0.001 * m_framerate_ms;
   }
 }
 

@@ -60,10 +60,6 @@ namespace signals {
     struct action_end;
     struct text;
     struct control;
-    struct background_animation;
-    struct foreground_animation;
-    struct underline_animation;
-    struct overline_animation;
   }  // namespace parser
 }  // namespace signals
 

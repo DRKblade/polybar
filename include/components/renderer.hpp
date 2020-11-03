@@ -101,8 +101,8 @@ class renderer
  private:
   connection& m_connection;
   signal_emitter& m_sig;
-  const logger& m_log;
   const config& m_conf;
+  const logger& m_log;
   const bar_settings& m_bar;
   std::shared_ptr<bg_slice> m_background;
 
@@ -134,6 +134,7 @@ class renderer
   std::bitset<3> m_attr;
   int m_font{0};
   bool m_anim_used;
+  double m_time;
   unsigned int m_frame;
   unsigned int m_framerate_ms;
   string m_bg{0U};
