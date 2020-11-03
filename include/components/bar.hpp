@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <atomic>
 #include <mutex>
+#include <thread>
 
 #include "common.hpp"
 #include "components/types.hpp"
@@ -80,6 +81,8 @@ class bar : public xpp::event::sink<evt::button_press, evt::expose, evt::propert
   void reconfigure_struts();
   void reconfigure_wm_hints();
   void broadcast_visibility();
+  void subthread();
+  void redraw();
 
   void handle(const evt::client_message& evt);
   void handle(const evt::destroy_notify& evt);
@@ -115,6 +118,7 @@ class bar : public xpp::event::sink<evt::button_press, evt::expose, evt::propert
 
   string m_lastinput{};
   std::mutex m_mutex{};
+  std::thread m_subthread{};
   std::atomic<bool> m_dblclicks{false};
 
   mousebtn m_buttonpress_btn{mousebtn::NONE};
@@ -129,6 +133,7 @@ class bar : public xpp::event::sink<evt::button_press, evt::expose, evt::propert
   double m_anim_step{0.0};
 
   bool m_visible{true};
+  bool m_running{true};
 };
 
 POLYBAR_NS_END

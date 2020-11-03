@@ -7,7 +7,7 @@ POLYBAR_NS
 
 class animated_color {
  public:
-  animated_color(gradient_t&& gradient, size_t framecount, size_t offset)
+  animated_color(gradient_t&& gradient, size_t framecount = 10, size_t offset = 0)
   	: m_gradient(move(gradient)),
   	  m_framecount(framecount),
   	  m_offset(offset) {}

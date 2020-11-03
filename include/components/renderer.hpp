@@ -3,6 +3,7 @@
 #include <cairo/cairo.h>
 #include <bitset>
 #include <memory>
+#include <mutex>
 
 #include "cairo/fwd.hpp"
 #include "cairo/context.hpp"
@@ -18,7 +19,7 @@ POLYBAR_NS
 
 // fwd {{{
 class connection;
-class config;
+;class config;
 class logger;
 class background_manager;
 class bg_slice;
@@ -30,23 +31,6 @@ struct alignment_block {
   cairo_pattern_t* pattern;
   double x;
   double y;
-};
-
-struct textblock {
-  cairo::textblock block{};
-  cairo::abspos origin{};
-  unsigned int fg;
-  unsigned int ol;
-  unsigned int ul;
-  double dx;
-  animated_color_t fg_anim;
-  animated_color_t bg_anim;
-  animated_color_t ul_anim;
-  animated_color_t ol_anim;
-	bool has_ol;
-	bool has_ul;
-
-  void update(int frame);
 };
 
 class renderer
@@ -79,6 +63,7 @@ class renderer
   void fill_underline(double x, double w, unsigned int color);
   void fill_borders();
   void draw_text(const string& contents);
+  void increment_subframe(unsigned int& framerate);
 
  protected:
   double block_x(alignment a) const;
@@ -88,9 +73,7 @@ class renderer
 
   void flush(alignment a);
   void highlight_clickable_areas();
-  void make_textblock(textblock& b, const string& contents);
-  void draw_textblock(textblock& block);
-  void parse_color(const string& value, unsigned int& color, animated_color_t& anim_color, unsigned int fallback);
+  unsigned int parse_color(const string& value, unsigned int fallback);
 
   bool on(const signals::ui::request_snapshot& evt);
   bool on(const signals::parser::change_background& evt);
@@ -150,13 +133,14 @@ class renderer
   alignment m_align;
   std::bitset<3> m_attr;
   int m_font{0};
-  int m_frame;
+  bool m_anim_used;
+  unsigned int m_frame;
+  unsigned int m_framerate_ms;
   string m_bg{0U};
   string m_fg{0U};
   string m_ol{0U};
   string m_ul{0U};
   vector<action_block> m_actions;
-  vector<textblock> m_textblocks;
 
   bool m_fixedcenter;
   string m_snapshot_dst;

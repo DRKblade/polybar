@@ -16,13 +16,6 @@ POLYBAR_NS
 
 static constexpr double BLOCK_GAP{20.0};
 
-void textblock::update(int frame) {
-  if (bg_anim) block.bg = bg_anim->get(frame);
-  if (fg_anim) fg = fg_anim->get(frame);
-  if (ul_anim) ul = ul_anim->get(frame);
-  if (ol_anim) ol = ol_anim->get(frame);
-}
-
 /**
  * Create instance
  */
@@ -177,6 +170,7 @@ renderer::renderer(connection& conn, signal_emitter& sig, const config& conf, co
     m_background = background.observe(m_bar.outer_area(false), m_window);
   }
 
+	m_framerate_ms = m_conf.get("settings", "base-framerate", 100);
   m_comp_bg = m_conf.get<cairo_operator_t>("settings", "compositing-background", m_comp_bg);
   m_comp_fg = m_conf.get<cairo_operator_t>("settings", "compositing-foreground", m_comp_fg);
   m_comp_ol = m_conf.get<cairo_operator_t>("settings", "compositing-overline", m_comp_ol);
@@ -218,6 +212,7 @@ void renderer::begin(xcb_rectangle_t rect) {
   m_actions.clear();
   m_attr.reset();
   m_align = alignment::NONE;
+  m_anim_used = false;
 
   // Reset colors
   m_bg = "";
@@ -670,78 +665,63 @@ void renderer::fill_borders() {
   m_context->restore();
 }
 
-void renderer::parse_color(const string& value, unsigned int& color, animated_color_t& anim_color, unsigned int fallback) {
+unsigned int renderer::parse_color(const string& value, unsigned int fallback) {
   if (value.compare(0, 5, "anim:") == 0) {
-    color = 0;
-    anim_color = parse_animated_color(m_conf, value.substr(5));
-  } else if (!value.empty() && value[0] != '-') {
-    anim_color = nullptr;
-		color = color_util::parse(value, fallback);
-  } else {
-    anim_color = nullptr;
-    color = fallback;
+    m_anim_used = true;
+    return parse_animated_color(m_conf, value.substr(5))->get(m_frame);
   }
+  if (!value.empty() && value[0] != '-') {
+		return color_util::parse(value, fallback);
+  }
+  return fallback;
 }
 
-/**
- * Copy contents and settings to a textblock
- */
-void renderer::make_textblock(textblock& b, const string& contents) {
-  b.origin.x = m_rect.x + m_blocks[m_align].x;
-  b.origin.y = m_rect.y + m_rect.height / 2.0;
-  b.block.align = m_align;
-  b.block.contents = contents;
-  b.block.font = m_font;
-  b.block.x_advance = &m_blocks[m_align].x;
-  b.block.y_advance = &m_blocks[m_align].y;
-  b.block.bg_rect = cairo::rect{0.0, 0.0, 0.0, 0.0};
-  
-  b.dx = m_rect.x + m_blocks[m_align].x - b.origin.x;
-  parse_color(m_fg, b.fg, b.fg_anim, m_bar.foreground);
-  parse_color(m_bg, b.block.bg, b.bg_anim, m_bar.background);
-	if (m_bar.underline.size && b.dx > 0.0 && m_attr.test(static_cast<int>(attribute::UNDERLINE))) {
-  	parse_color(m_ul, b.ul, b.ul_anim, m_bar.underline.color);
-	}
-	if (m_bar.overline.size && b.dx > 0.0 && m_attr.test(static_cast<int>(attribute::OVERLINE))) {
-  	parse_color(m_ol, b.ol, b.ol_anim, m_bar.overline.color);
-	}
+void renderer::draw_text(const string& contents) {
+  cairo::abspos origin{};
+  origin.x = m_rect.x + m_blocks[m_align].x;
+  origin.y = m_rect.y + m_rect.height / 2.0;
 
+  cairo::textblock block{};
+  block.align = m_align;
+  block.contents = contents;
+  block.font = m_font;
+  block.x_advance = &m_blocks[m_align].x;
+  block.y_advance = &m_blocks[m_align].y;
+	block.bg = parse_color(m_bg, m_bar.background);
   // Only draw text background if the color differs from
   // the background color of the bar itself
   // Note: this means that if the user explicitly set text
   // background color equal to background-0 it will be ignored
-  if (b.block.bg != m_bar.background) {
-    b.block.bg_operator = m_comp_bg;
-    b.block.bg_rect.x = m_rect.x;
-    b.block.bg_rect.y = m_rect.y;
-    b.block.bg_rect.h = m_rect.height;
-  } else b.block.bg = 0;
-}
+  if (block.bg != m_bar.background) {
+    block.bg_operator = m_comp_bg;
+    block.bg_rect.x = m_rect.x;
+    block.bg_rect.y = m_rect.y;
+    block.bg_rect.h = m_rect.height;
+  } else block.bg = 0;
 
-/**
- * Draw text contents
- */
-void renderer::draw_text(const string& contents) {
-  m_log.trace_x("renderer: text(%s)", contents.c_str());
-
-  textblock b{};
-	make_textblock(b, contents);
-	draw_textblock(b);
-	if (b.bg_anim || b.fg_anim || b.ol_anim || b.ul_anim) {
-		m_textblocks.push_back(b);
-	}
-}
-
-void renderer::draw_textblock(textblock& block) {
-	block.update(m_frame);
+  unsigned int fg = parse_color(m_fg, m_bar.foreground);
+  
 	m_context->save();
-  *m_context << block.origin;
+  *m_context << origin;
   *m_context << m_comp_fg;
-  *m_context << block.fg;
-  *m_context << block.block;
+  *m_context << fg;
+  *m_context << block;
   m_context->restore();
-  if (block.ul != 0) fill_overline(block.origin.x, block.dx, block.ul);
-  if (block.ol != 0) fill_underline(block.origin.x, block.dx, block.ol);
+
+  double dx = m_rect.x + m_blocks[m_align].x - origin.x;
+  if (dx > 0.0) {
+  	if (m_bar.underline.size && m_attr.test(static_cast<int>(attribute::UNDERLINE)))
+    	fill_overline(origin.x, dx, parse_color(m_ul, m_bar.underline.color));
+  	if (m_bar.overline.size && m_attr.test(static_cast<int>(attribute::OVERLINE)))
+    	fill_underline(origin.x, dx, parse_color(m_ol, m_bar.overline.color));
+  }
+}
+
+void renderer::increment_subframe(unsigned int& framerate) {
+  if (m_anim_used) {
+    framerate = m_framerate_ms;
+    m_frame++;
+  }
 }
 
 /**

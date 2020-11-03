@@ -30,7 +30,6 @@ parser::parser(signal_emitter& emitter) : m_sig(emitter) {}
  * Process input string
  */
 void parser::parse(string data) {
-  try{
   while (!data.empty()) {
     size_t pos{string::npos};
 
@@ -42,9 +41,6 @@ void parser::parse(string data) {
     } else {
       data.erase(0, text(data.substr(0)));
     }
-  }
-  }catch(std::exception e) {
-    throw application_error(data+"\n\n");
   }
 
   if (!m_actions.empty()) {

@@ -299,6 +299,7 @@ bar::~bar() {
   std::lock_guard<std::mutex> guard(m_mutex);
   m_connection.detach_sink(this, SINK_PRIORITY_BAR);
   m_sig.detach(this);
+  m_running = false;
 }
 
 /**
@@ -306,6 +307,23 @@ bar::~bar() {
  */
 const bar_settings bar::settings() const {
   return m_opts;
+}
+
+void bar::subthread() {
+  m_log.trace("Renderer: Start of subthread");
+  this_thread::sleep_for(chrono::milliseconds(500U));
+  while (m_running) {
+    auto now = chrono::steady_clock::now();
+    auto framerate = 1000U;
+    {
+      std::lock_guard<std::mutex> guard(m_mutex);
+      m_renderer->increment_subframe(framerate);
+      redraw();
+    }
+    now += chrono::milliseconds(framerate);
+    this_thread::sleep_until(now);
+  }
+  m_log.trace("Renderer: End of subthread");
 }
 
 /**
@@ -335,6 +353,25 @@ void bar::parse(string&& data, bool force) {
     return m_log.trace("bar: Ignoring update (unchanged)");
   }
 
+	redraw();
+
+  const auto check_dblclicks = [&]() -> bool {
+    for (auto&& action : m_renderer->actions()) {
+      if (static_cast<int>(action.button) >= static_cast<int>(mousebtn::DOUBLE_LEFT)) {
+        return true;
+      }
+    }
+    for (auto&& action : m_opts.actions) {
+      if (static_cast<int>(action.button) >= static_cast<int>(mousebtn::DOUBLE_LEFT)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  m_dblclicks = check_dblclicks();
+}
+
+void bar::redraw() {
   auto rect = m_opts.inner_area();
 
   if (m_tray && !m_tray->settings().detached && m_tray->settings().configured_slots) {
@@ -352,29 +389,12 @@ void bar::parse(string&& data, bool force) {
   m_renderer->begin(rect);
 
   try {
-    m_parser->parse(data);
+    m_parser->parse(m_lastinput);
   } catch (const parser_error& err) {
-    m_log.err("Failed to parse contents (reason: %s)\nContent: %s", err.what(), data);
-  } catch (const application_error& err) {
-    m_log.err("Failed to render contents (reason: %s)\nContent: %s", err.what(), data);
+    m_log.err("Failed to parse contents (reason: %s)\nContent: %s", err.what(), m_lastinput);
   }
 
   m_renderer->end();
-
-  const auto check_dblclicks = [&]() -> bool {
-    for (auto&& action : m_renderer->actions()) {
-      if (static_cast<int>(action.button) >= static_cast<int>(mousebtn::DOUBLE_LEFT)) {
-        return true;
-      }
-    }
-    for (auto&& action : m_opts.actions) {
-      if (static_cast<int>(action.button) >= static_cast<int>(mousebtn::DOUBLE_LEFT)) {
-        return true;
-      }
-    }
-    return false;
-  };
-  m_dblclicks = check_dblclicks();
 }
 
 /**
@@ -848,6 +868,8 @@ bool bar::on(const signals::eventqueue::start&) {
   m_tray->setup(static_cast<const bar_settings&>(m_opts));
 
   broadcast_visibility();
+
+  m_subthread = thread(&bar::subthread, this);
 
   return true;
 }

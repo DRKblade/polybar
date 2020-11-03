@@ -99,8 +99,6 @@ namespace color_util {
     		}
       }
 		}
-		result = 0xffff0000;
-		return true;
 		throw application_error("Invalid color code '" + value + "'");
   }
 }
