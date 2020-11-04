@@ -14,10 +14,10 @@ animated_color_t parse_animated_color(const config& conf, const string& value) {
     auto pos2 = value.find(':', ++pos);
 		if (pos2 != string::npos) {
     	return factory_util::shared<animated_color>(
-      	conf.get_gradient(gradient), stod(value.substr(pos, pos2 - pos)), stod(value.substr(pos2 + 1)));
+      	conf.get_gradient(gradient), std::stod(&value[pos]), std::stod(&value[pos2 + 1]));
 		}
   	return factory_util::shared<animated_color>(
-    	conf.get_gradient(gradient), stod(value.substr(pos)));
+    	conf.get_gradient(gradient), std::stod(&value[pos]));
   }
 	return factory_util::shared<animated_color>(
   	conf.get_gradient(value));

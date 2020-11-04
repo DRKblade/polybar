@@ -33,7 +33,7 @@ bool rgba::parse(const string& value, rgba& result) {
 	c.data.c = strtod(&value[++pos], nullptr);
 
 	pos = value.find(',', pos);
-	result.a = pos == string::npos ? 1.0 : stod(value.substr(++pos));
+	result.a = pos == string::npos ? 1.0 : std::stod(&value[++pos]);
 
 	c.set_colorspace(colorspaces::type::RGB);
 	c.data.copy_to(result);

@@ -315,7 +315,7 @@ class config {
         }
 
         auto property = string_util::trim(string_util::lower(value.substr(pos, op_pos - pos)));
-        auto amount = stod(value.substr(op_pos + 1, pos2 - op_pos));
+        auto amount = std::stod(&value[op_pos + 1]);
         double* modified;
         if (property == "lum" || property == "lightness" || property == "luminosity") {
           modified = &jab.a;

@@ -8,9 +8,9 @@ POLYBAR_NS
 double3::double3(const string& str) {
   string tmp = str;
   string::size_type sz;
-  a = stod(tmp, &sz);
-  b = stod(tmp = tmp.substr(sz), &sz);
-  c = stod(tmp.substr(sz));
+  a = std::stod(tmp, &sz);
+  b = std::stod(&tmp[sz], &sz);
+  c = std::stod(&tmp[sz]);
 }
 
 double3::double3(const rgba& src): a(src.r), b(src.g), c(src.b) {}
