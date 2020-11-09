@@ -318,22 +318,22 @@ namespace modules {
     string output;
     for (m_index = 0; m_index < m_viewports.size(); m_index++) {
       if (m_index > 0) {
-        m_builder->space(m_formatter->get(DEFAULT_FORMAT)->spacing);
+        m_builder.space(m_formatter->get(DEFAULT_FORMAT)->spacing);
       }
       output += module::get_output();
     }
 
     if (m_scroll) {
-      m_builder->cmd(mousebtn::SCROLL_DOWN, string{EVENT_PREFIX} + string{EVENT_SCROLL_DOWN});
-      m_builder->cmd(mousebtn::SCROLL_UP, string{EVENT_PREFIX} + string{EVENT_SCROLL_UP});
+      m_builder.cmd(mousebtn::SCROLL_DOWN, string{EVENT_PREFIX} + string{EVENT_SCROLL_DOWN});
+      m_builder.cmd(mousebtn::SCROLL_UP, string{EVENT_PREFIX} + string{EVENT_SCROLL_UP});
     }
 
-    m_builder->append(output);
+    m_builder.append(output);
 
-    m_builder->cmd_close();
-    m_builder->cmd_close();
+    m_builder.cmd_close();
+    m_builder.cmd_close();
 
-    return m_builder->flush();
+    return m_builder.flush();
   }
 
   /**

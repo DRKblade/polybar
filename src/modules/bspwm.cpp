@@ -59,32 +59,35 @@ namespace modules {
     m_fuzzy_match = m_conf.get(name(), "fuzzy-match", m_fuzzy_match);
 
     // Add formats and create components
-    m_formatter->add(DEFAULT_FORMAT, TAG_LABEL_STATE, {TAG_LABEL_STATE}, {TAG_LABEL_MONITOR, TAG_LABEL_MODE});
+    auto format = m_formatter->add(DEFAULT_FORMAT, TAG_LABEL_STATE, {TAG_LABEL_STATE}, {TAG_LABEL_MONITOR, TAG_LABEL_MODE});
+    auto style = format->style;
 
-    if (m_formatter->has(TAG_LABEL_MONITOR)) {
-      m_monitorlabel = load_optional_label(m_conf, name(), "label-monitor", DEFAULT_MONITOR_LABEL);
+		
+    if (format->has(TAG_LABEL_MONITOR)) {
+      m_monitorlabel = load_optional_label(m_conf, name(), "label-monitor", style, DEFAULT_MONITOR_LABEL);
     }
 
-    if (m_formatter->has(TAG_LABEL_STATE)) {
+    if (format->has(TAG_LABEL_STATE)) {
       // XXX: Warn about deprecated parameters
       m_conf.warn_deprecated(name(), "label-dimmed-active", "label-dimmed-focused");
-
       // clang-format off
       try {
-        m_statelabels.emplace(make_mask(state::FOCUSED), load_label(m_conf, name(), "label-active", DEFAULT_LABEL));
+        m_statelabels.emplace(make_mask(state::FOCUSED),
+                        load_label(m_conf, name(), "label-active", style, DEFAULT_LABEL));
         m_conf.warn_deprecated(name(), "label-active", "label-focused and label-dimmed-focused");
       } catch (const key_error& err) {
-        m_statelabels.emplace(make_mask(state::FOCUSED), load_optional_label(m_conf, name(), "label-focused", DEFAULT_LABEL));
+        m_statelabels.emplace(make_mask(state::FOCUSED),
+                        load_optional_label(m_conf, name(), "label-focused", style, DEFAULT_LABEL));
       }
 
       m_statelabels.emplace(make_mask(state::OCCUPIED),
-          load_optional_label(m_conf, name(), "label-occupied", DEFAULT_LABEL));
+          load_optional_label(m_conf, name(), "label-occupied", style, DEFAULT_LABEL));
       m_statelabels.emplace(make_mask(state::URGENT),
-          load_optional_label(m_conf, name(), "label-urgent", DEFAULT_LABEL));
+          load_optional_label(m_conf, name(), "label-urgent", style, DEFAULT_LABEL));
       m_statelabels.emplace(make_mask(state::EMPTY),
-          load_optional_label(m_conf, name(), "label-empty", DEFAULT_LABEL));
+          load_optional_label(m_conf, name(), "label-empty", style, DEFAULT_LABEL));
       m_statelabels.emplace(make_mask(state::DIMMED),
-          load_optional_label(m_conf, name(), "label-dimmed"));
+          load_optional_label(m_conf, name(), "label-dimmed", style));
 
       vector<pair<state, string>> focused_overrides{
         {state::OCCUPIED, "label-focused-occupied"},
@@ -94,7 +97,7 @@ namespace modules {
       for (auto&& os : focused_overrides) {
         unsigned int mask{make_mask(state::FOCUSED, os.first)};
         try {
-          m_statelabels.emplace(mask, load_label(m_conf, name(), os.second));
+          m_statelabels.emplace(mask, load_label(m_conf, name(), os.second, style));
         } catch (const key_error& err) {
           m_statelabels.emplace(mask, m_statelabels.at(make_mask(state::FOCUSED))->clone());
         }
@@ -108,24 +111,33 @@ namespace modules {
 
       for (auto&& os : dimmed_overrides) {
         m_statelabels.emplace(make_mask(state::DIMMED, os.first),
-            load_optional_label(m_conf, name(), os.second, m_statelabels.at(make_mask(os.first))->get()));
+            load_optional_label(m_conf, name(), os.second, style, m_statelabels.at(make_mask(os.first))->get()));
       }
       // clang-format on
     }
 
-    if (m_formatter->has(TAG_LABEL_MODE)) {
-      m_modelabels.emplace(mode::LAYOUT_MONOCLE, load_optional_label(m_conf, name(), "label-monocle"));
-      m_modelabels.emplace(mode::LAYOUT_TILED, load_optional_label(m_conf, name(), "label-tiled"));
-      m_modelabels.emplace(mode::STATE_FULLSCREEN, load_optional_label(m_conf, name(), "label-fullscreen"));
-      m_modelabels.emplace(mode::STATE_FLOATING, load_optional_label(m_conf, name(), "label-floating"));
-      m_modelabels.emplace(mode::STATE_PSEUDOTILED, load_optional_label(m_conf, name(), "label-pseudotiled"));
-      m_modelabels.emplace(mode::NODE_LOCKED, load_optional_label(m_conf, name(), "label-locked"));
-      m_modelabels.emplace(mode::NODE_STICKY, load_optional_label(m_conf, name(), "label-sticky"));
-      m_modelabels.emplace(mode::NODE_PRIVATE, load_optional_label(m_conf, name(), "label-private"));
-      m_modelabels.emplace(mode::NODE_MARKED, load_optional_label(m_conf, name(), "label-marked"));
+    if (format->has(TAG_LABEL_MODE)) {
+      m_modelabels.emplace(mode::LAYOUT_MONOCLE,
+                           load_optional_label(m_conf, name(), "label-monocle", style));
+      m_modelabels.emplace(mode::LAYOUT_TILED,
+                           load_optional_label(m_conf, name(), "label-tiled", style));
+      m_modelabels.emplace(mode::STATE_FULLSCREEN,
+                           load_optional_label(m_conf, name(), "label-fullscreen", style));
+      m_modelabels.emplace(mode::STATE_FLOATING,
+                           load_optional_label(m_conf, name(), "label-floating", style));
+      m_modelabels.emplace(mode::STATE_PSEUDOTILED,
+                           load_optional_label(m_conf, name(), "label-pseudotiled", style));
+      m_modelabels.emplace(mode::NODE_LOCKED,
+                           load_optional_label(m_conf, name(), "label-locked", style));
+      m_modelabels.emplace(mode::NODE_STICKY,
+                           load_optional_label(m_conf, name(), "label-sticky", style));
+      m_modelabels.emplace(mode::NODE_PRIVATE,
+                           load_optional_label(m_conf, name(), "label-private", style));
+      m_modelabels.emplace(mode::NODE_MARKED,
+                           load_optional_label(m_conf, name(), "label-marked", style));
     }
 
-    m_labelseparator = load_optional_label(m_conf, name(), "label-separator", "");
+    m_labelseparator = load_optional_label(m_conf, name(), "label-separator", style, "");
 
     m_icons = factory_util::shared<iconset>();
     m_icons->add(DEFAULT_ICON, factory_util::shared<label>(m_conf.get(name(), DEFAULT_ICON, ""s)));
@@ -381,7 +393,7 @@ namespace modules {
     string output;
     for (m_index = 0U; m_index < m_monitors.size(); m_index++) {
       if (m_index > 0) {
-        m_builder->space(m_formatter->get(DEFAULT_FORMAT)->spacing);
+        m_builder.space(m_formatter->get(DEFAULT_FORMAT)->spacing);
       }
       output += this->event_module::get_output();
     }

@@ -14,14 +14,17 @@ using namespace drawtypes;
 
 class builder {
  public:
+  using make_type = builder&;
+	static make_type make(const bar_settings& bar);
+
   explicit builder(const bar_settings& bar);
 
-  void reset();
+  void clear();
   string flush();
   void append(string text);
   void node(string str);
   void node(string str, int font_index);
-  void node(const label_t& label);
+  void node(const label_t& label, bool keep_colors = false);
   void node_repeat(const string& str, size_t n);
   void node_repeat(const label_t& label, size_t n);
   void offset(int pixels = 0);
@@ -31,30 +34,18 @@ class builder {
   void remove_trailing_space();
   void font(int index);
   void font_close();
-  void background(string color);
-  void background_close();
-  void color(string color);
-  void color_alpha(string alpha);
-  void color_close();
-  void line_color(const string& color);
-  void line_color_close();
-  void overline_color(string color);
-  void overline_color_close();
-  void underline_color(string color);
-  void underline_color_close();
-  void overline(const string& color = "");
-  void overline_close();
-  void underline(const string& color = "");
-  void underline_close();
   void control(controltag tag);
   void cmd(mousebtn index, string action);
   void cmd(mousebtn index, string action, const label_t& label);
   void cmd_close();
+	void color(string color, syntaxtag tag);
+	void line_color(string color, attribute tag);
 
  protected:
-  string background_hex();
-  string foreground_hex();
+	string color_hex(syntaxtag tag);
 
+  void line_color(const string& color);
+  void line_color_close();
   void tag_open(syntaxtag tag, const string& value);
   void tag_open(attribute attr);
   void tag_close(syntaxtag tag);
@@ -67,6 +58,8 @@ class builder {
   map<syntaxtag, int> m_tags{};
   map<syntaxtag, string> m_colors{};
   map<attribute, bool> m_attrs{};
+  map<syntaxtag, bool> m_colors_closing{};
+  map<syntaxtag, string> m_colors_default{};
 
   int m_fontindex{0};
 

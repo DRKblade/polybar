@@ -25,7 +25,7 @@ namespace drawtypes {
     void fill(unsigned int perc, unsigned int fill_width);
 
    private:
-    unique_ptr<builder> m_builder;
+    builder& m_builder;
     vector<string> m_colors;
     string m_format;
     unsigned int m_width;
@@ -39,7 +39,8 @@ namespace drawtypes {
 
   using progressbar_t = shared_ptr<progressbar>;
 
-  progressbar_t load_progressbar(const bar_settings& bar, const config& conf, const string& section, string name);
+  progressbar_t load_progressbar(const bar_settings& bar, const config& conf, const string& section,
+                                 string name, const label_t& fallback = nullptr);
 }
 
 POLYBAR_NS_END

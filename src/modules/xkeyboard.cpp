@@ -172,14 +172,14 @@ namespace modules {
     string output{module::get_output()};
 
     if (m_keyboard && m_keyboard->size() > 1) {
-      m_builder->cmd(mousebtn::LEFT, EVENT_SWITCH);
-      m_builder->append(output);
-      m_builder->cmd_close();
+      m_builder.cmd(mousebtn::LEFT, EVENT_SWITCH);
+      m_builder.append(output);
+      m_builder.cmd_close();
     } else {
-      m_builder->append(output);
+      m_builder.append(output);
     }
 
-    return m_builder->flush();
+    return m_builder.flush();
   }
 
   /**

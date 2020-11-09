@@ -1,7 +1,6 @@
 #include <cmath>
 #include "utils/colorspaces.hpp"
 #include "utils/color.hpp"
-#include "components/config.hpp"
 
 POLYBAR_NS
 

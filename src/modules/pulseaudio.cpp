@@ -110,21 +110,21 @@ namespace modules {
       auto click_right = m_conf.get(name(), "click-right", ""s);
 
       if (!click_middle.empty()) {
-        m_builder->cmd(mousebtn::MIDDLE, click_middle);
+        m_builder.cmd(mousebtn::MIDDLE, click_middle);
       }
 
       if (!click_right.empty()) {
-        m_builder->cmd(mousebtn::RIGHT, click_right);
+        m_builder.cmd(mousebtn::RIGHT, click_right);
       }
 
-      m_builder->cmd(mousebtn::LEFT, EVENT_TOGGLE_MUTE);
-      m_builder->cmd(mousebtn::SCROLL_UP, EVENT_VOLUME_UP);
-      m_builder->cmd(mousebtn::SCROLL_DOWN, EVENT_VOLUME_DOWN);
+      m_builder.cmd(mousebtn::LEFT, EVENT_TOGGLE_MUTE);
+      m_builder.cmd(mousebtn::SCROLL_UP, EVENT_VOLUME_UP);
+      m_builder.cmd(mousebtn::SCROLL_DOWN, EVENT_VOLUME_DOWN);
     }
 
-    m_builder->append(output);
+    m_builder.append(output);
 
-    return m_builder->flush();
+    return m_builder.flush();
   }
 
   bool pulseaudio_module::build(builder* builder, const string& tag) const {

@@ -39,11 +39,12 @@ namespace drawtypes {
 
   using labellist_t = shared_ptr<labellist>;
   void load_labellist(vector<label_t>& labels, label_t& tmplate,
-      gradient_t& foreground_grad,
-      gradient_t& background_grad,
-      gradient_t& underline_grad,
-      gradient_t& overline_grad,
-      const config& conf, const string& section, string name, bool required = true);
+                      gradient_t& foreground_grad,
+                      gradient_t& background_grad,
+                      gradient_t& underline_grad,
+                      gradient_t& overline_grad,
+                      const config& conf, const string& section, string name,
+                      const label_t& fallback, bool required = true);
 }
 
 POLYBAR_NS_END

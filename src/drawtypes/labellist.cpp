@@ -31,11 +31,12 @@ namespace drawtypes {
 
   
   void load_labellist(vector<label_t>& labels, label_t& tmplate,
-      gradient_t& foreground_grad,
-      gradient_t& background_grad,
-      gradient_t& underline_grad,
-      gradient_t& overline_grad,
-      const config& conf, const string& section, string name, bool required) {
+                      gradient_t& foreground_grad,
+                      gradient_t& background_grad,
+                      gradient_t& underline_grad,
+                      gradient_t& overline_grad,
+                      const config& conf, const string& section, string name,
+                      const label_t& fallback, bool required) {
     vector<string> names;
     if(required) {
       names = conf.get_list(section, name);
@@ -57,9 +58,9 @@ namespace drawtypes {
       overline_grad = load_gradient(conf, gradient_path);
     }
 
-    tmplate = load_label(conf, section, name, false, "%label%");
+    tmplate = load_label(conf, section, name, fallback, false, "%label%");
     for (size_t i = 0; i < names.size(); i++) {
-      labels.emplace_back(forward<label_t>(load_optional_label(conf, section, name + "-" + to_string(i), names[i])));
+      labels.emplace_back(forward<label_t>(load_optional_label(conf, section, name + "-" + to_string(i), fallback, names[i])));
       labels.back()->copy_undefined(tmplate);
       labels.back()->useas_token(tmplate, "%label%");
     }

@@ -177,6 +177,9 @@ namespace signals {
     struct control : public detail::value_signal<control, controltag> {
       using base_type::base_type;
     };
+    struct insert_blankspace : public detail::value_signal<insert_blankspace, blankspace> {
+      using base_type::base_type;
+    };
   }  // namespace parser
 }  // namespace signals
 

@@ -27,11 +27,13 @@ namespace modules {
     m_formatter->add(DEFAULT_FORMAT, default_format, {TAG_LABEL_TOGGLE, TAG_MENU});
 
     if (m_formatter->has(TAG_LABEL_TOGGLE)) {
-      m_labelopen = load_label(m_conf, name(), "label-open");
-      m_labelclose = load_optional_label(m_conf, name(), "label-close", "x");
+      m_labelopen = load_label(m_conf, name(), 
+      												 "label-open");
+      m_labelclose = load_optional_label(m_conf, name(), "label-close", 
+      												 "x");
     }
 
-    m_labelseparator = load_optional_label(m_conf, name(), "label-separator", "");
+    m_labelseparator = load_optional_label(m_conf, name(), "label-separator", nullptr, "");
 
     if (!m_formatter->has(TAG_MENU)) {
       return;

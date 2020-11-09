@@ -20,27 +20,30 @@ namespace modules {
     m_totalwarn = m_conf.get(name(), "warn-percentage", 80);
     m_ramp_padding = m_conf.get<decltype(m_ramp_padding)>(name(), "ramp-coreload-spacing", 1);
 
-    m_formatter->add(DEFAULT_FORMAT, TAG_LABEL, {TAG_LABEL, TAG_BAR_LOAD, TAG_RAMP_LOAD, TAG_RAMP_LOAD_PER_CORE});
-    m_formatter->add(FORMAT_WARN, TAG_LABEL_WARN, {TAG_LABEL_WARN, TAG_ANIMATION_WARN, TAG_BAR_LOAD, TAG_RAMP_LOAD, TAG_RAMP_LOAD_PER_CORE});
+    auto format = m_formatter->add(DEFAULT_FORMAT, TAG_LABEL,
+                    {TAG_LABEL, TAG_BAR_LOAD, TAG_RAMP_LOAD, TAG_RAMP_LOAD_PER_CORE});
+    if (m_formatter->has(TAG_LABEL_WARN)) {
+      m_labelwarn = load_optional_label(m_conf, name(), TAG_LABEL_WARN, format->style, "%percentage%%");
+    }
+    if (m_formatter->has(TAG_ANIMATION_WARN)) {
+      m_animation_warn = load_animation(m_conf, name(), TAG_ANIMATION_WARN);
+    }
+    
+    format = m_formatter->add(FORMAT_WARN, TAG_LABEL_WARN,
+                    {TAG_LABEL_WARN, TAG_ANIMATION_WARN, TAG_BAR_LOAD, TAG_RAMP_LOAD, TAG_RAMP_LOAD_PER_CORE});
 
     // warmup cpu times
     read_values();
     read_values();
 
     if (m_formatter->has(TAG_LABEL)) {
-      m_label = load_optional_label(m_conf, name(), TAG_LABEL, "%percentage%%");
-    }
-    if (m_formatter->has(TAG_LABEL_WARN)) {
-      m_labelwarn = load_optional_label(m_conf, name(), TAG_LABEL_WARN, "%percentage%%");
+      m_label = load_optional_label(m_conf, name(), TAG_LABEL, nullptr, "%percentage%%");
     }
     if (m_formatter->has(TAG_BAR_LOAD)) {
       m_barload = load_progressbar(m_bar, m_conf, name(), TAG_BAR_LOAD);
     }
     if (m_formatter->has(TAG_RAMP_LOAD)) {
       m_rampload = load_ramp(m_conf, name(), TAG_RAMP_LOAD);
-    }
-    if (m_formatter->has(TAG_ANIMATION_WARN)) {
-      m_animation_warn = load_animation(m_conf, name(), TAG_ANIMATION_WARN);
     }
     if (m_formatter->has(TAG_RAMP_LOAD_PER_CORE)) {
       m_rampload_core = load_ramp(m_conf, name(), TAG_RAMP_LOAD_PER_CORE);

@@ -42,12 +42,13 @@ namespace drawtypes {
    * Create an animation by loading values
    * from the configuration
    */
-  animation_t load_animation(const config& conf, const string& section, string name, bool required) {
+  animation_t load_animation(const config& conf, const string& section, string name,
+                             const label_t& fallback, bool required) {
     name = string_util::ltrim(string_util::rtrim(move(name), '>'), '<');
     vector<label_t> vec;
     label_t tmplate;
     gradient_t fg, bg, ul, ol;
-    load_labellist(vec, tmplate, fg, bg, ul, ol, conf, section, name, required);
+    load_labellist(vec, tmplate, fg, bg, ul, ol, conf, section, name, fallback, required);
     auto framerate = conf.get(section, name + "-framerate", 1000);
     auto subframecount = conf.get(section, name + "-gradient-subframes", 1);
     return factory_util::shared<animation>(move(vec), framerate, subframecount, move(tmplate), move(fg), move(bg), move(ul), move(ol));

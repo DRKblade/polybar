@@ -46,6 +46,10 @@ namespace drawtypes {
     return string(left_fill_len, ' ') + m_tokenized + string(right_fill_len, ' ');
   }
 
+  string label::get_raw() const {
+    return m_text;
+  }
+
   label::operator bool() {
     return !m_tokenized.empty();
   }
@@ -176,7 +180,8 @@ namespace drawtypes {
   /**
    * Create a label by loading values from the configuration
    */
-  label_t load_label(const config& conf, const string& section, string name, bool required, string def) {
+  label_t load_label(const config& conf, const string& section, string name,
+                     const label_t& fallback, bool required, string def) {
     vector<token> tokens;
     size_t start, end, pos;
 
@@ -193,15 +198,21 @@ namespace drawtypes {
       text = conf.get(section, name, move(def));
     }
 
-    const auto get_left_right = [&](string key) {
-      auto value = conf.get(section, key, 0U);
-      auto left = conf.get(section, key + "-left", value);
-      auto right = conf.get(section, key + "-right", value);
-      return side_values{static_cast<unsigned short int>(left), static_cast<unsigned short int>(right)};
+    const auto get_left_right = [&](string key, side_values fallback) {
+      unsigned short left, right;
+      if (conf.has(section, key)) {
+        unsigned short value = static_cast<unsigned short int>(conf.get(section, key, 0U));
+        left = conf.get(section, key + "-left", value);
+        right = conf.get(section, key + "-right", value);
+      } else {
+        left = conf.get(section, key + "-left", fallback.left);
+        right = conf.get(section, key + "-right", fallback.right);
+      }
+      return side_values{left, right};
     };
 
-    padding = get_left_right(name + "-padding");
-    margin = get_left_right(name + "-margin");
+    padding = get_left_right(name + "-padding", fallback ? fallback->m_padding : side_values{0U, 0U});
+    margin = get_left_right(name + "-margin", fallback ? fallback->m_margin : side_values{0U, 0U});
 
     string line{text};
 
@@ -286,11 +297,11 @@ namespace drawtypes {
 
     // clang-format off
     return factory_util::shared<label>(text,
-        conf.get_color(section, name + "-foreground", ""s),
-        conf.get_color(section, name + "-background", ""s),
-        conf.get_color(section, name + "-underline", ""s),
-        conf.get_color(section, name + "-overline", ""s),
-        conf.get(section, name + "-font", 0),
+        conf.get_color(section, name + "-foreground", fallback ? fallback->m_foreground : ""s),
+        conf.get_color(section, name + "-background", fallback ? fallback->m_background : ""s),
+        conf.get_color(section, name + "-underline", fallback ? fallback->m_underline : ""s),
+        conf.get_color(section, name + "-overline", fallback ? fallback->m_overline : ""s),
+        conf.get(section, name + "-font", fallback ? fallback->m_font : 0),
         padding,
         margin,
         minlen,
@@ -304,8 +315,19 @@ namespace drawtypes {
   /**
    * Create a label by loading optional values from the configuration
    */
-  label_t load_optional_label(const config& conf, string section, string name, string def) {
-    return load_label(conf, move(section), move(name), false, move(def));
+  label_t load_optional_label(const config& conf, string section, string name,
+                              const label_t& fallback, string def) {
+    return load_label(conf, move(section), move(name), fallback, false, move(def));
+  }
+  
+  label_t load_optional_label(const config& conf, string section, string name,
+                              string def) {
+    return load_label(conf, move(section), move(name), nullptr, false, move(def));
+  }
+  
+  label_t load_label(const config& conf, const string& section, string name
+                     ) {
+    return load_label(conf, section, name, nullptr);
   }
 
 }  // namespace drawtypes

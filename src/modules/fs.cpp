@@ -161,7 +161,7 @@ namespace modules {
 
     for (m_index = 0_z; m_index < m_mounts.size(); ++m_index) {
       if (!output.empty()) {
-        m_builder->space(m_spacing);
+        m_builder.space(m_spacing);
       }
       output += timer_module::get_output();
     }

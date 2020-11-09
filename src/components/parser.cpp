@@ -157,6 +157,10 @@ void parser::codeblock(string&& data) {
         m_sig.emit(attribute_toggle{parse_attr(value[0])});
         break;
 
+//      case 'S':
+//      	m_sig.emit(insert_blankspace{parse_blankspace(value)});
+//      	break;
+
       case 'A': {
         bool has_btn_id = (data[0] != ':');
         if (isdigit(data[0]) || !has_btn_id) {
@@ -189,7 +193,7 @@ void parser::codeblock(string&& data) {
         break;
 
       default:
-        throw unrecognized_token("Unrecognized token '" + string{tag} + "' in '" + data + "'");
+        throw unrecognized_token("Unrecognized token '" + string{tag} + "', data remaining: '" + data + "'");
     }
 
     if (!data.empty()) {

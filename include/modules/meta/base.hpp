@@ -56,23 +56,19 @@ namespace modules {
   // class definition : module_format {{{
 
   struct module_format {
-    string value{};
     vector<string> tags{};
     label_t prefix{};
     label_t suffix{};
-    string fg{};
-    string bg{};
-    string ul{};
-    string ol{};
+    label_t style{};
+    size_t spacing{0};
+    int offset{0};
     size_t ulsize{0};
     size_t olsize{0};
-    size_t spacing{0};
-    size_t padding{0};
-    size_t margin{0};
-    int offset{0};
-    int font{0};
 
-    string decorate(builder* builder, string output);
+    void begin(builder& builder);
+    void end(builder& builder);
+    bool has(const string& tag);
+    string get_value() const;
   };
 
   // }}}
@@ -82,7 +78,7 @@ namespace modules {
    public:
     explicit module_formatter(const config& conf, string modname) : m_conf(conf), m_modname(modname) {}
 
-    void add(string name, string fallback, vector<string>&& tags, vector<string>&& whitelist = {});
+    shared_ptr<module_format> add(string name, string fallback, vector<string>&& tags, vector<string>&& whitelist = {});
     bool has(const string& tag, const string& format_name);
     bool has(const string& tag);
     shared_ptr<module_format> get(const string& format_name);
@@ -141,6 +137,7 @@ namespace modules {
     const bar_settings m_bar;
     const logger& m_log;
     const config& m_conf;
+    builder& m_builder;
 
     mutex m_buildlock;
     mutex m_updatelock;
@@ -148,7 +145,6 @@ namespace modules {
     std::condition_variable m_sleephandler;
 
     string m_name;
-    unique_ptr<builder> m_builder;
     unique_ptr<module_formatter> m_formatter;
     vector<thread> m_threads;
     thread m_mainthread;

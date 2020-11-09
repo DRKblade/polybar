@@ -157,7 +157,7 @@ bar::bar(connection& conn, signal_emitter& emitter, const config& config, const 
   // Load configuration values
   m_opts.origin = m_conf.get(bs, "bottom", false) ? edge::BOTTOM : edge::TOP;
   m_opts.spacing = m_conf.get(bs, "spacing", m_opts.spacing);
-  m_opts.separator = drawtypes::load_optional_label(m_conf, bs, "separator", "");
+  m_opts.separator = drawtypes::load_optional_label(m_conf, bs, "separator", nullptr, "");
   m_opts.space_unit = m_conf.get(bs, "space-unit", static_cast<string>(" "));
   m_opts.locale = m_conf.get(bs, "locale", ""s);
 
@@ -390,8 +390,9 @@ void bar::redraw() {
 
   try {
     m_parser->parse(m_lastinput);
+    m_log.trace("Bar data: %s", m_lastinput);
   } catch (const parser_error& err) {
-    m_log.err("Failed to parse contents (reason: %s)\nContent: %s", err.what(), m_lastinput);
+    m_log.err("Failed to parse contents (reason: %s)\nBar data: %s", err.what(), m_lastinput);
   }
 
   m_renderer->end();

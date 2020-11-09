@@ -89,15 +89,17 @@ namespace color_util {
   unsigned int parse(const string& value);
 
   inline string simplify_hex(string hex) {
-    // convert #ffrrggbb to #rrggbb
-    if (hex.length() == 9 && std::toupper(hex[1]) == 'F' && std::toupper(hex[2]) == 'F') {
-      hex.erase(1, 2);
-    }
+    if(hex[0] == '#') {
+      // convert #ffrrggbb to #rrggbb
+      if (hex.length() == 9 && std::toupper(hex[1]) == 'F' && std::toupper(hex[2]) == 'F') {
+        hex.erase(1, 2);
+      }
 
-    // convert #rrggbb to #rgb
-    if (hex.length() == 7) {
-      if (hex[1] == hex[2] && hex[3] == hex[4] && hex[5] == hex[6]) {
-        hex = {'#', hex[1], hex[3], hex[5]};
+      // convert #rrggbb to #rgb
+      if (hex.length() == 7) {
+        if (hex[1] == hex[2] && hex[3] == hex[4] && hex[5] == hex[6]) {
+          hex = {'#', hex[1], hex[3], hex[5]};
+        }
       }
     }
     return hex;

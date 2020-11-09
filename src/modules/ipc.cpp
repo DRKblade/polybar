@@ -78,12 +78,12 @@ namespace modules {
 
     for (auto&& action : m_actions) {
       if (!action.second.empty()) {
-        m_builder->cmd(action.first, action.second);
+        m_builder.cmd(action.first, action.second);
       }
     }
 
-    m_builder->append(output);
-    return m_builder->flush();
+    m_builder.append(output);
+    return m_builder.flush();
   }
 
   /**

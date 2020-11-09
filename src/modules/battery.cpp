@@ -125,40 +125,44 @@ namespace modules {
     m_percentage = current_percentage();
 
     // Add formats and elements
-    m_formatter->add(FORMAT_CHARGING, TAG_LABEL_CHARGING,
+    auto format = m_formatter->add(FORMAT_CHARGING, TAG_LABEL_CHARGING,
         {TAG_BAR_CAPACITY, TAG_RAMP_CAPACITY, TAG_ANIMATION_CHARGING, TAG_LABEL_CHARGING});
-    m_formatter->add(FORMAT_DISCHARGING, TAG_LABEL_DISCHARGING,
+    if (format->has(TAG_ANIMATION_CHARGING)) {
+      m_animation_charging = load_animation(m_conf, name(), TAG_ANIMATION_CHARGING, format->style);
+    }
+    if (format->has(TAG_LABEL_CHARGING)) {
+      m_label_charging = load_optional_label(m_conf, name(), TAG_LABEL_CHARGING, format->style, "%percentage%%");
+    }
+    
+    format = m_formatter->add(FORMAT_DISCHARGING, TAG_LABEL_DISCHARGING,
         {TAG_BAR_CAPACITY, TAG_RAMP_CAPACITY, TAG_ANIMATION_DISCHARGING, TAG_LABEL_DISCHARGING});
-    m_formatter->add(FORMAT_LOW, TAG_LABEL_LOW,
-        {TAG_BAR_CAPACITY, TAG_RAMP_CAPACITY, TAG_ANIMATION_LOW, TAG_LABEL_LOW});
-    m_formatter->add(FORMAT_FULL, TAG_LABEL_FULL, {TAG_BAR_CAPACITY, TAG_RAMP_CAPACITY, TAG_LABEL_FULL});
+    if (format->has(TAG_ANIMATION_DISCHARGING)) {
+      m_animation_discharging = load_animation(m_conf, name(), TAG_ANIMATION_DISCHARGING, format->style);
+    }
+    if (format->has(TAG_LABEL_DISCHARGING)) {
+      m_label_discharging = load_optional_label(m_conf, name(), TAG_LABEL_DISCHARGING, format->style, "%percentage%%");
+    }
 
-    if (m_formatter->has(TAG_ANIMATION_CHARGING, FORMAT_CHARGING)) {
-      m_animation_charging = load_animation(m_conf, name(), TAG_ANIMATION_CHARGING);
+    format = m_formatter->add(FORMAT_LOW, TAG_LABEL_LOW,
+        {TAG_BAR_CAPACITY, TAG_RAMP_CAPACITY, TAG_ANIMATION_LOW, TAG_LABEL_LOW});
+    if (format->has(TAG_ANIMATION_LOW)) {
+      m_animation_low = load_animation(m_conf, name(), TAG_ANIMATION_LOW, format->style);
     }
-    if (m_formatter->has(TAG_ANIMATION_DISCHARGING, FORMAT_DISCHARGING)) {
-      m_animation_discharging = load_animation(m_conf, name(), TAG_ANIMATION_DISCHARGING);
+    if (format->has(TAG_LABEL_LOW)) {
+      m_label_low = load_optional_label(m_conf, name(), TAG_LABEL_LOW, format->style, "%percentage%%");
     }
-    if (m_formatter->has(TAG_ANIMATION_LOW, FORMAT_LOW)) {
-      m_animation_low = load_animation(m_conf, name(), TAG_ANIMATION_LOW);
+    
+    format = m_formatter->add(FORMAT_FULL, TAG_LABEL_FULL,
+                              {TAG_BAR_CAPACITY, TAG_RAMP_CAPACITY, TAG_LABEL_FULL});
+    if (format->has(TAG_LABEL_FULL)) {
+      m_label_full = load_optional_label(m_conf, name(), TAG_LABEL_FULL, format->style, "%percentage%%");
     }
+
     if (m_formatter->has(TAG_BAR_CAPACITY)) {
-      m_bar_capacity = load_progressbar(m_bar, m_conf, name(), TAG_BAR_CAPACITY);
+      m_bar_capacity = load_progressbar(m_bar, m_conf, name(), TAG_BAR_CAPACITY, nullptr);
     }
     if (m_formatter->has(TAG_RAMP_CAPACITY)) {
-      m_ramp_capacity = load_ramp(m_conf, name(), TAG_RAMP_CAPACITY);
-    }
-    if (m_formatter->has(TAG_LABEL_CHARGING, FORMAT_CHARGING)) {
-      m_label_charging = load_optional_label(m_conf, name(), TAG_LABEL_CHARGING, "%percentage%%");
-    }
-    if (m_formatter->has(TAG_LABEL_DISCHARGING, FORMAT_DISCHARGING)) {
-      m_label_discharging = load_optional_label(m_conf, name(), TAG_LABEL_DISCHARGING, "%percentage%%");
-    }
-    if (m_formatter->has(TAG_LABEL_LOW, FORMAT_LOW)) {
-      m_label_low = load_optional_label(m_conf, name(), TAG_LABEL_LOW, "%percentage%%");
-    }
-    if (m_formatter->has(TAG_LABEL_FULL, FORMAT_FULL)) {
-      m_label_full = load_optional_label(m_conf, name(), TAG_LABEL_FULL, "%percentage%%");
+      m_ramp_capacity = load_ramp(m_conf, name(), TAG_RAMP_CAPACITY, nullptr);
     }
 
     // Create inotify watches

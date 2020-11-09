@@ -48,12 +48,13 @@ namespace drawtypes {
    * Create a ramp by loading values
    * from the configuration
    */
-  ramp_t load_ramp(const config& conf, const string& section, string name, bool required) {
+  ramp_t load_ramp(const config& conf, const string& section, string name,
+                   const label_t& fallback, bool required) {
     name = string_util::ltrim(string_util::rtrim(move(name), '>'), '<');
     vector<label_t> vec;
     label_t tmplate;
     gradient_t fg, bg, ul, ol;
-    load_labellist(vec, tmplate, fg, bg, ul, ol, conf, section, name, required);
+    load_labellist(vec, tmplate, fg, bg, ul, ol, conf, section, name, fallback, required);
     return factory_util::shared<drawtypes::ramp>(move(vec), move(tmplate), move(fg), move(bg), move(ul), move(ol));
   }
 }

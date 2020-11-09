@@ -46,8 +46,8 @@ namespace drawtypes {
 
   using animation_t = shared_ptr<animation>;
 
-  animation_t load_animation(
-      const config& conf, const string& section, string name = "animation", bool required = true);
+  animation_t load_animation(const config& conf, const string& section, string name,
+                             const label_t& fallback = nullptr, bool required = true);
 }  // namespace drawtypes
 
 POLYBAR_NS_END

@@ -55,16 +55,16 @@ namespace modules {
     m_connection.select_input_checked(m_proxy, XCB_RANDR_NOTIFY_MASK_OUTPUT_PROPERTY);
 
     // Add formats and elements
-    m_formatter->add(DEFAULT_FORMAT, TAG_LABEL, {TAG_LABEL, TAG_BAR, TAG_RAMP});
+    auto format = m_formatter->add(DEFAULT_FORMAT, TAG_LABEL, {TAG_LABEL, TAG_BAR, TAG_RAMP});
 
-    if (m_formatter->has(TAG_LABEL)) {
-      m_label = load_optional_label(m_conf, name(), TAG_LABEL, "%percentage%%");
+    if (format->has(TAG_LABEL)) {
+      m_label = load_optional_label(m_conf, name(), TAG_LABEL, format->style, "%percentage%%");
     }
-    if (m_formatter->has(TAG_BAR)) {
-      m_progressbar = load_progressbar(m_bar, m_conf, name(), TAG_BAR);
+    if (format->has(TAG_BAR)) {
+      m_progressbar = load_progressbar(m_bar, m_conf, name(), TAG_BAR, format->style);
     }
-    if (m_formatter->has(TAG_RAMP)) {
-      m_ramp = load_ramp(m_conf, name(), TAG_RAMP);
+    if (format->has(TAG_RAMP)) {
+      m_ramp = load_ramp(m_conf, name(), TAG_RAMP, format->style);
     }
   }
 
@@ -116,16 +116,16 @@ namespace modules {
     string output{module::get_output()};
 
     if (m_scroll) {
-      m_builder->cmd(mousebtn::SCROLL_UP, EVENT_SCROLLUP);
-      m_builder->cmd(mousebtn::SCROLL_DOWN, EVENT_SCROLLDOWN);
+      m_builder.cmd(mousebtn::SCROLL_UP, EVENT_SCROLLUP);
+      m_builder.cmd(mousebtn::SCROLL_DOWN, EVENT_SCROLLDOWN);
     }
 
-    m_builder->append(output);
+    m_builder.append(output);
 
-    m_builder->cmd_close();
-    m_builder->cmd_close();
+    m_builder.cmd_close();
+    m_builder.cmd_close();
 
-    return m_builder->flush();
+    return m_builder.flush();
   }
 
   /**

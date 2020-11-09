@@ -31,19 +31,19 @@ enum class edge { NONE = 0, TOP, BOTTOM, LEFT, RIGHT, ALL };
 
 enum class alignment { NONE = 0, LEFT, CENTER, RIGHT };
 
-enum class attribute { NONE = 0, UNDERLINE, OVERLINE };
+enum class attribute { NONE = 0, UNDERLINE = 'u', OVERLINE = 'o' };
 
 enum class syntaxtag {
   NONE = 0,
-  A,  // mouse action
-  B,  // background color
-  F,  // foreground color
-  T,  // font index
-  O,  // pixel offset
-  R,  // flip colors
-  o,  // overline color
-  u,  // underline color
-  P,  // Polybar control tag
+  A = 'A',  // mouse action
+  B = 'B',  // background color
+  F = 'F',  // foreground color
+  T = 'T',  // font index
+  O = 'O',  // pixel offset
+  R = 'R',  // flip colors
+  o = 'o',  // overline color
+  u = 'u',  // underline color
+  P = 'P',  // Polybar control tag
 };
 
 /**
@@ -72,6 +72,17 @@ enum class strut {
   TOP_END_X,
   BOTTOM_START_X,
   BOTTOM_END_X,
+};
+
+enum length_unit {
+  space,
+  px,
+  em,
+};
+
+struct blankspace {
+	length_unit unit;
+	int amount;
 };
 
 struct position {

@@ -9,10 +9,14 @@
 POLYBAR_NS
 
 builder::builder(const bar_settings& bar) : m_bar(bar) {
-  reset();
+  clear();
 }
 
-void builder::reset() {
+builder::make_type builder::make(const bar_settings& bar) {
+  return *factory_util::singleton<std::remove_reference_t<builder::make_type>>(bar);
+}
+
+void builder::clear() {
   /* Add all values as keys so that we never have to check if a key exists in
    * the map
    */
@@ -48,26 +52,8 @@ void builder::reset() {
  * This will also close any unclosed tags
  */
 string builder::flush() {
-  if (m_tags[syntaxtag::B]) {
-    background_close();
-  }
-  if (m_tags[syntaxtag::F]) {
-    color_close();
-  }
   if (m_tags[syntaxtag::T]) {
     font_close();
-  }
-  if (m_tags[syntaxtag::o]) {
-    overline_color_close();
-  }
-  if (m_tags[syntaxtag::u]) {
-    underline_color_close();
-  }
-  if (m_attrs[attribute::UNDERLINE]) {
-    underline_close();
-  }
-  if (m_attrs[attribute::OVERLINE]) {
-    overline_close();
   }
 
   while (m_tags[syntaxtag::A]) {
@@ -76,7 +62,7 @@ string builder::flush() {
 
   string output{m_output};
 
-  reset();
+  m_output.clear();
 
   return output;
 }
@@ -116,7 +102,7 @@ void builder::node(string str, int font_index) {
 /**
  * Insert tags for given label
  */
-void builder::node(const label_t& label) {
+void builder::node(const label_t& label, bool keep_colors) {
   if (!label || !*label) {
     return;
   }
@@ -127,19 +113,11 @@ void builder::node(const label_t& label) {
     space(label->m_margin.left);
   }
 
-  if (!label->m_overline.empty()) {
-    overline(label->m_overline);
-  }
-  if (!label->m_underline.empty()) {
-    underline(label->m_underline);
-  }
+  line_color(label->m_underline, attribute::UNDERLINE);
+  line_color(label->m_overline, attribute::OVERLINE);
 
-  if (!label->m_background.empty()) {
-    background(label->m_background);
-  }
-  if (!label->m_foreground.empty()) {
-    color(label->m_foreground);
-  }
+  color(label->m_background, syntaxtag::B);
+  color(label->m_foreground, syntaxtag::F);
 
   if (label->m_padding.left > 0) {
     space(label->m_padding.left);
@@ -151,19 +129,12 @@ void builder::node(const label_t& label) {
     space(label->m_padding.right);
   }
 
-  if (!label->m_background.empty()) {
-    background_close();
-  }
-  if (!label->m_foreground.empty()) {
-    color_close();
-  }
-
-  if (!label->m_underline.empty()) {
-    underline_close();
-  }
-  if (!label->m_overline.empty()) {
-    overline_close();
-  }
+	if (!keep_colors) {
+    m_colors_closing[syntaxtag::B] = true;
+    m_colors_closing[syntaxtag::F] = true;
+    m_colors_closing[syntaxtag::u] = true;
+    m_colors_closing[syntaxtag::o] = true;
+	}
 
   if (label->m_margin.right > 0) {
     space(label->m_margin.right);
@@ -257,157 +228,54 @@ void builder::font_close() {
 }
 
 /**
- * Insert tag to alter the current background color
+ * Insert tag to alter the current color
  */
-void builder::background(string color) {
-  if (color.length() == 2 || (color.find('#') == 0 && color.length() == 3)) {
-    string bg{background_hex()};
-    color = "#" + color.substr(color.length() - 2);
-    color += bg.substr(bg.length() - (bg.length() < 6 ? 3 : 6));
-  }
-
-  color = color_util::simplify_hex(color);
-  m_colors[syntaxtag::B] = color;
-  tag_open(syntaxtag::B, color);
-}
-
-/**
- * Insert tag to reset the background color
- */
-void builder::background_close() {
-  m_colors[syntaxtag::B].clear();
-  tag_close(syntaxtag::B);
-}
-
-/**
- * Insert tag to alter the current foreground color
- */
-void builder::color(string color) {
-  if (color.length() == 2 || (color[0] == '#' && color.length() == 3)) {
-    string fg{foreground_hex()};
-    if (!fg.empty()) {
-      color = "#" + color.substr(color.length() - 2);
-      color += fg.substr(fg.length() - (fg.length() < 6 ? 3 : 6));
+void builder::color(string color, syntaxtag tag) {
+  if (color.empty()) {
+    if (m_colors_closing[tag]) {
+      tag_close(tag);
+      m_colors[tag].clear();
+      m_colors_closing[tag] = false;
     }
+  } else if (color != m_colors[tag]) {
+    m_colors[tag] = color;
+    m_colors_closing[tag] = false;
+    color = color_util::simplify_hex(color);
+    tag_open(tag, color);
   }
-
-  color = color_util::simplify_hex(color);
-  m_colors[syntaxtag::F] = color;
-  tag_open(syntaxtag::F, color);
 }
 
-/**
- * Insert tag to alter the alpha value of the default foreground color
- */
-void builder::color_alpha(string alpha) {
-  if (alpha.find('#') == string::npos) {
-    alpha = "#" + alpha;
-  }
-  if (alpha.size() == 4) {
-    color(alpha);
-  } else {
-    string val{foreground_hex()};
-    if (val.size() < 6 && val.size() > 2) {
-      val.append(val.substr(val.size() - 3));
+void builder::line_color(string color, attribute attr) {
+  auto tag = static_cast<syntaxtag>(static_cast<int>(attr));
+  if (color.empty()) {
+    if (m_colors_closing[tag]) {
+      tag_close(attr);
+      m_colors[tag].clear();
+      m_colors_closing[tag] = false;
     }
-    color((alpha.substr(0, 3) + val.substr(val.size() - 6)).substr(0, 9));
+  } else if (color != m_colors[tag]) {
+    m_colors[tag] = color;
+    m_colors_closing[tag] = false;
+    color = color_util::simplify_hex(color);
+    tag_open(tag, color);
+    tag_open(attr);
   }
-}
-
-/**
- * Insert tag to reset the foreground color
- */
-void builder::color_close() {
-  m_colors[syntaxtag::F].clear();
-  tag_close(syntaxtag::F);
 }
 
 /**
  * Insert tag to alter the current overline/underline color
  */
 void builder::line_color(const string& color) {
-  overline_color(color);
-  underline_color(color);
+  line_color(color, attribute::UNDERLINE);
+  line_color(color, attribute::OVERLINE);
 }
 
 /**
  * Close overline/underline color tag
  */
 void builder::line_color_close() {
-  overline_color_close();
-  underline_color_close();
-}
-
-/**
- * Insert tag to alter the current overline color
- */
-void builder::overline_color(string color) {
-  color = color_util::simplify_hex(color);
-  m_colors[syntaxtag::o] = color;
-  tag_open(syntaxtag::o, color);
-  tag_open(attribute::OVERLINE);
-}
-
-/**
- * Close underline color tag
- */
-void builder::overline_color_close() {
-  m_colors[syntaxtag::o].clear();
-  tag_close(syntaxtag::o);
-}
-
-/**
- * Insert tag to alter the current underline color
- */
-void builder::underline_color(string color) {
-  color = color_util::simplify_hex(color);
-  m_colors[syntaxtag::u] = color;
-  tag_open(syntaxtag::u, color);
-  tag_open(attribute::UNDERLINE);
-}
-
-/**
- * Close underline color tag
- */
-void builder::underline_color_close() {
-  tag_close(syntaxtag::u);
-  m_colors[syntaxtag::u].clear();
-}
-
-/**
- * Insert tag to enable the overline attribute
- */
-void builder::overline(const string& color) {
-  if (!color.empty()) {
-    overline_color(color);
-  } else {
-    tag_open(attribute::OVERLINE);
-  }
-}
-
-/**
- * Close overline attribute tag
- */
-void builder::overline_close() {
-  tag_close(attribute::OVERLINE);
-}
-
-/**
- * Insert tag to enable the underline attribute
- */
-void builder::underline(const string& color) {
-  if (!color.empty()) {
-    underline_color(color);
-  } else {
-    tag_open(attribute::UNDERLINE);
-  }
-}
-
-/**
- * Close underline attribute tag
- */
-void builder::underline_close() {
   tag_close(attribute::UNDERLINE);
+  tag_close(attribute::OVERLINE);
 }
 
 /**
@@ -457,23 +325,31 @@ void builder::cmd_close() {
 }
 
 /**
- * Get default background hex string
+ * Get default color hex string
  */
-string builder::background_hex() {
-  if (m_background.empty()) {
-    m_background = color_util::hex<unsigned short int>(m_bar.background);
+string builder::color_hex(syntaxtag tag) {
+  string& value = m_colors_default[tag];
+  if (value.empty()) {
+    unsigned int code;
+		switch(tag) {
+  	 case syntaxtag::B:
+    	code = m_bar.background;
+    	break;
+  	 case syntaxtag::F:
+    	code = m_bar.foreground;
+    	break;
+  	 case syntaxtag::u:
+    	code = m_bar.underline.color;
+    	break;
+  	 case syntaxtag::o:
+    	code = m_bar.overline.color;
+    	break;
+     default:
+      throw application_error("Unknown color tag '" + to_string(static_cast<int>(tag)) + "'");
+		}
+		value = color_util::hex<unsigned short int>(code);
   }
-  return m_background;
-}
-
-/**
- * Get default foreground hex string
- */
-string builder::foreground_hex() {
-  if (m_foreground.empty()) {
-    m_foreground = color_util::hex<unsigned short int>(m_bar.foreground);
-  }
-  return m_foreground;
+  return value;
 }
 
 /**
@@ -552,20 +428,11 @@ void builder::tag_close(syntaxtag tag) {
       append("%{A}");
       break;
     case syntaxtag::F:
-      append("%{F-}");
-      break;
     case syntaxtag::B:
-      append("%{B-}");
-      break;
-    case syntaxtag::T:
-      append("%{T-}");
-      break;
     case syntaxtag::u:
-      append("%{u-}");
-      break;
     case syntaxtag::o:
-      append("%{o-}");
-      break;
+    case syntaxtag::T:
+      append("%{"s.append(1, static_cast<char>(tag)) + "-}");
     case syntaxtag::NONE:
     case syntaxtag::R:
     case syntaxtag::P:
@@ -588,10 +455,8 @@ void builder::tag_close(attribute attr) {
     case attribute::NONE:
       break;
     case attribute::UNDERLINE:
-      append("%{-u}");
-      break;
     case attribute::OVERLINE:
-      append("%{-o}");
+      append("%{-"s.append(1, static_cast<char>(attr)) + "}");
       break;
   }
 }

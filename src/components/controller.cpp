@@ -430,7 +430,8 @@ bool controller::process_update(bool force) {
   string margin_left(bar.module_margin.left, ' ');
   string margin_right(bar.module_margin.right, ' ');
 
-  builder build{bar};
+	auto build = builder::make(bar);
+	build.clear();
   build.node(bar.separator);
   string separator{build.flush()};
 

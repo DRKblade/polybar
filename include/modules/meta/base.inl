@@ -16,8 +16,8 @@ namespace modules {
       , m_bar(bar)
       , m_log(logger::make())
       , m_conf(config::make())
+      , m_builder(builder::make(bar))
       , m_name("module/" + name)
-      , m_builder(make_unique<builder>(bar))
       , m_formatter(make_unique<module_formatter>(m_conf, m_name))
       , m_handle_events(m_conf.get(m_name, "handle-events", true)) {}
 
@@ -80,13 +80,6 @@ namespace modules {
     if (m_changed) {
       m_log.info("%s: Rebuilding cache", name());
       m_cache = CAST_MOD(Impl)->get_output();
-      // Make sure builder is really empty
-      m_builder->flush();
-      if (!m_cache.empty()) {
-        // Add a reset tag after the module
-        m_builder->control(controltag::R);
-        m_cache += m_builder->flush();
-      }
       m_changed = false;
     }
     return m_cache;
@@ -146,7 +139,9 @@ namespace modules {
     bool tag_built{false};
     auto mingap = std::max(1_z, format->spacing);
     size_t start, end;
-    string value{format->value};
+    string value{format->get_value()};
+
+    format->begin(m_builder);
     while ((start = value.find('<')) != string::npos && (end = value.find('>', start)) != string::npos) {
       if (start > 0) {
         if (no_tag_built) {
@@ -156,10 +151,10 @@ namespace modules {
           auto trimmed = string_util::ltrim(value.substr(0, start), ' ');
           if (!trimmed.empty()) {
             fake_no_tag_built = false;
-            m_builder->node(move(trimmed));
+            m_builder.node(move(trimmed));
           }
         } else {
-          m_builder->node(value.substr(0, start));
+          m_builder.node(value.substr(0, start));
         }
         value.erase(0, start);
         end -= start;
@@ -170,11 +165,11 @@ namespace modules {
         continue;
       } else if (tag[0] == '<' && tag[tag.size() - 1] == '>') {
         if (!no_tag_built)
-          m_builder->space(format->spacing);
+          m_builder.space(format->spacing);
         else if (fake_no_tag_built)
           no_tag_built = false;
-        if (!(tag_built = CONST_MOD(Impl).build(m_builder.get(), tag)) && !no_tag_built)
-          m_builder->remove_trailing_space(mingap);
+        if (!(tag_built = CONST_MOD(Impl).build(&m_builder, tag)) && !no_tag_built)
+          m_builder.remove_trailing_space(mingap);
         if (tag_built)
           no_tag_built = false;
       }
@@ -182,10 +177,11 @@ namespace modules {
     }
 
     if (!value.empty()) {
-      m_builder->append(value);
+      m_builder.append(value);
     }
 
-    return format->decorate(&*m_builder, m_builder->flush());
+		format->end(m_builder);
+    return m_builder.flush();
   }
 
   // }}}

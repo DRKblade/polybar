@@ -19,7 +19,7 @@ POLYBAR_NS
 
 // fwd {{{
 class connection;
-;class config;
+class config;
 class logger;
 class background_manager;
 class bg_slice;

@@ -29,8 +29,8 @@ namespace modules {
     if (m_formatter->has(TAG_DATE)) {
       m_log.warn("%s: The format tag `<date>` is deprecated, use `<label>` instead.", name());
 
-      m_formatter->get(DEFAULT_FORMAT)->value =
-          string_util::replace_all(m_formatter->get(DEFAULT_FORMAT)->value, TAG_DATE, TAG_LABEL);
+      m_formatter->get(DEFAULT_FORMAT)->get_value() =
+          string_util::replace_all(m_formatter->get(DEFAULT_FORMAT)->get_value(), TAG_DATE, TAG_LABEL);
     }
 
     if (m_formatter->has(TAG_LABEL)) {

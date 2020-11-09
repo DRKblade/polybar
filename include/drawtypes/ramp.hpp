@@ -28,7 +28,7 @@ namespace drawtypes {
 
   using ramp_t = shared_ptr<ramp>;
 
-  ramp_t load_ramp(const config& conf, const string& section, string name, bool required = true);
+  ramp_t load_ramp(const config& conf, const string& section, string name, const label_t& fallback = nullptr, bool required = true);
 }
 
 POLYBAR_NS_END

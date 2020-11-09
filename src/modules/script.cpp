@@ -194,13 +194,13 @@ namespace modules {
         if(m_tail && m_command && m_command->is_running()) {
           action_replaced = string_util::replace_all(action_replaced, "%pid%", to_string(m_command->get_pid()));
         }
-        m_builder->cmd(btn, action_replaced);
+        m_builder.cmd(btn, action_replaced);
       }
     }
 
-    m_builder->append(output);
+    m_builder.append(output);
 
-    return m_builder->flush();
+    return m_builder.flush();
   }
 
   /**

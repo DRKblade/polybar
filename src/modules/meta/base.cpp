@@ -9,109 +9,62 @@ POLYBAR_NS
 namespace modules {
   // module_format {{{
 
-  string module_format::decorate(builder* builder, string output) {
-    if (output.empty()) {
-      builder->flush();
-      return "";
-    }
+	void module_format::begin(builder& builder) {
     if (offset != 0) {
-      builder->offset(offset);
+      builder.offset(offset);
     }
-    if (margin > 0) {
-      builder->space(margin);
+    if (style->m_margin.left > 0) {
+      builder.space(style->m_margin.left);
     }
-    if (!bg.empty()) {
-      builder->background(bg);
-    }
-    if (!fg.empty()) {
-      builder->color(fg);
-    }
-    if (!ul.empty()) {
-      builder->underline(ul);
-    }
-    if (!ol.empty()) {
-      builder->overline(ol);
-    }
-    if(font > 0) {
-      builder->font(font);
-    }
-    if (padding > 0) {
-      builder->space(padding);
+    if (style->m_padding.left > 0) {
+      builder.space(style->m_padding.left);
     }
 
-    builder->node(prefix);
+    builder.node(prefix);
+	}
 
-    if (!bg.empty()) {
-      builder->background(bg);
-    }
-    if (!fg.empty()) {
-      builder->color(fg);
-    }
-    if (!ul.empty()) {
-      builder->underline(ul);
-    }
-    if (!ol.empty()) {
-      builder->overline(ol);
-    }
+	void module_format::end(builder& builder) {
+    builder.node(suffix);
 
-    builder->append(move(output));
-    builder->node(suffix);
+    if (style->m_padding.right > 0) {
+      builder.space(style->m_padding.right);
+    }
+    if (style->m_margin.right > 0) {
+      builder.space(style->m_margin.right);
+    }
+	}
 
-    if (padding > 0) {
-      builder->space(padding);
-    }
-    if(font > 0) {
-      builder->font_close();
-    }
-    if (!ol.empty()) {
-      builder->overline_close();
-    }
-    if (!ul.empty()) {
-      builder->underline_close();
-    }
-    if (!fg.empty()) {
-      builder->color_close();
-    }
-    if (!bg.empty()) {
-      builder->background_close();
-    }
-    if (margin > 0) {
-      builder->space(margin);
-    }
+	bool module_format::has(const string& tag) {
+  	return style->get_raw().find(tag) != string::npos;
+	}
 
-    return builder->flush();
-  }
+	string module_format::get_value() const {
+  	return style->get_raw();
+	}
 
   // }}}
   // module_formatter {{{
 
-  void module_formatter::add(string name, string fallback, vector<string>&& tags, vector<string>&& whitelist) {
+  shared_ptr<module_format> module_formatter::add(string name, string fallback, vector<string>&& tags, vector<string>&& whitelist) {
     const auto formatdef = [&](
         const string& param, const auto& fallback) { return m_conf.get("settings", "format-" + param, fallback); };
 
     auto format = make_unique<module_format>();
-    format->value = m_conf.get(m_modname, name, move(fallback));
-    format->fg = m_conf.get_color(m_modname, name + "-foreground", formatdef("foreground", format->fg));
-    format->bg = m_conf.get_color(m_modname, name + "-background", formatdef("background", format->bg));
-    format->ul = m_conf.get_color(m_modname, name + "-underline", formatdef("underline", format->ul));
-    format->ol = m_conf.get_color(m_modname, name + "-overline", formatdef("overline", format->ol));
+    format->style = load_label(m_conf, m_modname, name, nullptr, false, fallback);
+    format->offset = m_conf.get(m_modname, name + "-offset", formatdef("offset", format->offset));
+    format->spacing = m_conf.get(m_modname, name + "-spacing", formatdef("spacing", format->spacing));
     format->ulsize = m_conf.get(m_modname, name + "-underline-size", formatdef("underline-size", format->ulsize));
     format->olsize = m_conf.get(m_modname, name + "-overline-size", formatdef("overline-size", format->olsize));
-    format->spacing = m_conf.get(m_modname, name + "-spacing", formatdef("spacing", format->spacing));
-    format->padding = m_conf.get(m_modname, name + "-padding", formatdef("padding", format->padding));
-    format->margin = m_conf.get(m_modname, name + "-margin", formatdef("margin", format->margin));
-    format->offset = m_conf.get(m_modname, name + "-offset", formatdef("offset", format->offset));
-    format->font = m_conf.get(m_modname, name + "-font", formatdef("font", format->font));
     format->tags.swap(tags);
 
     try {
-      format->prefix = load_label(m_conf, m_modname, name + "-prefix");
+      format->prefix = load_label(m_conf, m_modname, name + "-prefix", format->style);
     } catch (const key_error& err) {
       // prefix not defined
     }
 
     try {
-      format->suffix = load_label(m_conf, m_modname, name + "-suffix");
+      format->suffix = load_label(m_conf, m_modname, name + "-suffix", format->style);
     } catch (const key_error& err) {
       // suffix not defined
     }
@@ -122,7 +75,7 @@ namespace modules {
     tag_collection.insert(tag_collection.end(), whitelist.begin(), whitelist.end());
 
     size_t start, end;
-    string value{format->value};
+    string value{format->style->get_raw()};
     while ((start = value.find('<')) != string::npos && (end = value.find('>', start)) != string::npos) {
       if (start > 0) {
         value.erase(0, start);
@@ -137,6 +90,7 @@ namespace modules {
     }
 
     m_formats.insert(make_pair(move(name), move(format)));
+    return format;
   }
 
   bool module_formatter::has(const string& tag, const string& format_name) {
@@ -144,12 +98,12 @@ namespace modules {
     if (format == m_formats.end()) {
       throw undefined_format(format_name);
     }
-    return format->second->value.find(tag) != string::npos;
+    return format->second->has(tag);
   }
 
   bool module_formatter::has(const string& tag) {
     for (auto&& format : m_formats) {
-      if (format.second->value.find(tag) != string::npos) {
+      if (format.second->has(tag)) {
         return true;
       }
     }

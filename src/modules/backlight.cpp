@@ -31,16 +31,16 @@ namespace modules {
     m_scroll = m_conf.get(name(), "enable-scroll", m_scroll);
 
     // Add formats and elements
-    m_formatter->add(DEFAULT_FORMAT, TAG_LABEL, {TAG_LABEL, TAG_BAR, TAG_RAMP});
+    auto format = m_formatter->add(DEFAULT_FORMAT, TAG_LABEL, {TAG_LABEL, TAG_BAR, TAG_RAMP});
 
-    if (m_formatter->has(TAG_LABEL)) {
-      m_label = load_optional_label(m_conf, name(), TAG_LABEL, "%percentage%%");
+    if (format->has(TAG_LABEL)) {
+      m_label = load_optional_label(m_conf, name(), TAG_LABEL, format->style, "%percentage%%");
     }
-    if (m_formatter->has(TAG_BAR)) {
-      m_progressbar = load_progressbar(m_bar, m_conf, name(), TAG_BAR);
+    if (format->has(TAG_BAR)) {
+      m_progressbar = load_progressbar(m_bar, m_conf, name(), TAG_BAR, format->style);
     }
-    if (m_formatter->has(TAG_RAMP)) {
-      m_ramp = load_ramp(m_conf, name(), TAG_RAMP);
+    if (format->has(TAG_RAMP)) {
+      m_ramp = load_ramp(m_conf, name(), TAG_RAMP, format->style);
     }
 
     // Build path to the sysfs folder the current/maximum brightness values are located
@@ -88,16 +88,16 @@ namespace modules {
     string output{module::get_output()};
 
     if (m_scroll) {
-      m_builder->cmd(mousebtn::SCROLL_UP, EVENT_SCROLLUP);
-      m_builder->cmd(mousebtn::SCROLL_DOWN, EVENT_SCROLLDOWN);
+      m_builder.cmd(mousebtn::SCROLL_UP, EVENT_SCROLLUP);
+      m_builder.cmd(mousebtn::SCROLL_DOWN, EVENT_SCROLLDOWN);
     }
 
-    m_builder->append(std::move(output));
+    m_builder.append(std::move(output));
 
-    m_builder->cmd_close();
-    m_builder->cmd_close();
+    m_builder.cmd_close();
+    m_builder.cmd_close();
 
-    return m_builder->flush();
+    return m_builder.flush();
   }
 
   bool backlight_module::build(builder* builder, const string& tag) const {
