@@ -26,7 +26,7 @@ namespace modules {
    * setting up required components
    */
   fs_module::fs_module(const bar_settings& bar, string name_) : timer_module<fs_module>(bar, move(name_)) {
-    m_mountpoints = m_conf.get_list(name(), "mount");
+    m_mountpoints = m_conf.get_list_throw(name(), "mount");
     m_remove_unmounted = m_conf.get(name(), "remove-unmounted", m_remove_unmounted);
     m_perc_used_warn = m_conf.get(name(), "warn-percentage", 90);
     m_fixed = m_conf.get(name(), "fixed-values", m_fixed);

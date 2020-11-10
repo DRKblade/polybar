@@ -42,13 +42,13 @@ namespace modules {
     query_keyboard();
 
     // Load config values
-    m_blacklist = m_conf.get_list(name(), "blacklist", {});
+    m_blacklist = m_conf.get_list(name(), "blacklist");
 
     // load layout icons
     m_layout_icons = factory_util::shared<iconset>();
     m_layout_icons->add(DEFAULT_LAYOUT_ICON, load_optional_label(m_conf, name(), DEFAULT_LAYOUT_ICON, ""s));
 
-    for (const auto& it : m_conf.get_list<string>(name(), "layout-icon", {})) {
+    for (const auto& it : m_conf.get_list(name(), "layout-icon")) {
       auto vec = string_util::tokenize(it, ';');
       if (vec.size() == 2) {
         m_layout_icons->add(vec[0], factory_util::shared<label>(vec[1]));
@@ -89,7 +89,7 @@ namespace modules {
         m_indicator_icons_on->add(DEFAULT_INDICATOR_ICON, factory_util::shared<label>(""s));
       }
 
-      for (const auto& it : m_conf.get_list<string>(name(), "indicator-icon", {})) {
+      for (const auto& it : m_conf.get_list(name(), "indicator-icon")) {
         auto icon_triple = string_util::tokenize(it, ';');
         if (icon_triple.size() == 3) {
           auto const indicator_str = string_util::lower(icon_triple[0]);

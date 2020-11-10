@@ -39,9 +39,9 @@ namespace drawtypes {
                       const label_t& fallback, bool required) {
     vector<string> names;
     if(required) {
-      names = conf.get_list(section, name);
+      names = conf.get_list_throw(section, name);
     } else {
-      names = conf.get_list(section, name, {});
+      names = conf.get_list(section, name);
     }
 
 		string gradient_path;

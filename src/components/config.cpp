@@ -57,7 +57,7 @@ void config::set_included(file_list included) {
  */
 void config::warn_deprecated(const string& section, const string& key, string replacement) const {
   try {
-    auto value = get<string>(section, key);
+    auto value = get(section, key);
     m_log.warn(
         "The config parameter `%s.%s` is deprecated, use `%s.%s` instead.", section, key, section, move(replacement));
   } catch (const key_error& err) {
@@ -84,41 +84,22 @@ void config::set(const string& section, const string& key, string&& value) {
   }
 }
 
-bool config::get_raw(const string& section, const string& key, string& result) {
+bool config::try_get(const string& section, const string& key, string& result) const {
   auto it = m_sections.find(section);
   if (it == m_sections.end() || it->second.find(key) == it->second.end()) {
     result = it->second.at(key);
     return true;
   }
-  return false;
+  return true;
 }
 
-string config::get(const string& key) const {
-  return get(section(), key);
-}
-
-string config::get(const string& section, const string& key) const {
+string config::get_guarded(const string& section, const string& key, const string& default_value, vector<string>& ref_trace) const {
   string value;
-  if (!get_raw(section, key, value)) {
-    throw key_error("Missing parameter \"" + section + "." + key + "\"");
-  }
-  return dereference(section, key, value, value);
-}
-
-string config::get(const string& section, const string& key, const string& default_value) const {
-  string value;
-  if (!get_raw(section, key, value)) {
+  if (!try_get(section, key, value)) {
     return default_value;
   }
-  return dereference(section, key, value, default_value);
-}
-
-string config::get_guarded(const string& section, const string& key, vector<string>& ref_trace) const {
-  string value;
-  if (!get_raw(section, key, value)) {
-    return default_value;
-  }
-  return dereference(section, key, value, default_value, ref_trace);
+  dereference(section, key, value, ref_trace);
+  return value;
 }
 
 gradient_t config::get_gradient(const string& name) const {
@@ -132,21 +113,20 @@ gradient_t config::get_gradient(const string& name) const {
 }
 
 string config::get_color(const string& section, const string& key, const string& default_value) const {
-  try {
-    string string_value{get<string>(section, key)};
-    return color_util::colorspace_torgb(
-      dereference<string>(move(section), move(key), string_value, string_value));
-  } catch (const key_error& err) {
-    return default_value;
-  }
+  auto value = get(section, key, default_value);
+  if (!dereference(section, key, value))
+    value = default_value;
+  return color_util::colorspace_torgb(move(value));
 }
 
-void try_get_list(const string& section, const string& key, vector<string>& result) const {
+void config::try_get_list(const string& section, const string& key, vector<string>& result) const {
   result.clear();
   while (true) {
     string value;
-    if (try_get(section, key + "-" + to_string(results.size()), value)) {
-      result.emplace_back(value.empty() ? move(value) : dereference(section, key, value, move(value)));
+    if (try_get(section, key + "-" + to_string(result.size()), value)) {
+      if (!value.empty())
+        dereference(section, key, value);
+      result.emplace_back(move(value));
     } else break;
   }
 }
@@ -155,7 +135,7 @@ vector<string> config::get_list(const string& key) const {
   return get_list(section(), key);
 }
 
-vector<string> config::get_list(const string& section, const string& key) const {
+vector<string> config::get_list_throw(const string& section, const string& key) const {
 	vector<string> result;
 	try_get_list(section, key, result);
   if (result.empty()) {
@@ -164,32 +144,18 @@ vector<string> config::get_list(const string& section, const string& key) const 
   return result;
 }
 
-vector<string> get_list(const string& section, const string& key, const vector<string>& default_value) const {
+vector<string> config::get_list(const string& section, const string& key) const {
 	vector<string> result;
 	try_get_list(section, key, result);
-  if (result.empty()) {
-    return default_value;
-  }
   return result;
 }
 
-string config::deprecated(const string& section, const string& old, const string& newkey, const string& fallback) const {
+vector<string> config::deprecated_list(const string& section, const string& old, const string& newkey) const {
   try {
-    string value{get(section, old)};
     warn_deprecated(section, old, newkey);
-    return value;
+    return get_list(section, old);
   } catch (const key_error& err) {
-    return get(section, newkey, fallback);
-  }
-}
-
-string config::deprecated_list(const string& section, const string& old, const string& newkey, const vector<string>& fallback) const {
-  try {
-    vector value{get_list(section, old)};
-    warn_deprecated(section, old, newkey);
-    return value;
-  } catch (const key_error& err) {
-    return get_list(section, newkey, fallback);
+    return get_list(section, newkey);
   }
 }
 
@@ -206,7 +172,8 @@ void config::copy_inherited() {
       if (param.first == "inherit") {
         // Get name of base section
         auto inherit = param.second;
-        if ((inherit = dereference<string>(section.first, param.first, inherit, inherit)).empty()) {
+        dereference(section.first, param.first, inherit);
+        if (inherit.empty()) {
           throw value_error("Invalid section \"\" defined for \"" + section.first + ".inherit\"");
         }
 
@@ -230,14 +197,14 @@ void config::copy_inherited() {
   }
 }
 
-string config::dereference(const string& section, const string& key, const string& var, const string& fallback) const {
+bool config::dereference(const string& section, const string& key, string& value) const {
   vector<string> ref_trace{};
-  return dereference(section, key, var, fallback, ref_trace);
+  return dereference(section, key, value, ref_trace);
 }
 
-string config::dereference(const string& section, const string& key, const string& var, const string& fallback, vector<string> ref_trace) const {
-  if (var.compare(0, 2, "${") || var[var.length() - 1] != "}") {
-    return fallback;
+bool config::dereference(const string& section, const string& key, string& value, vector<string> ref_trace) const {
+  if (value.compare(0, 2, "${") || value.back() != '}') {
+    return false;
   }
 	{
     string key_path = section + "." + key;
@@ -252,90 +219,20 @@ string config::dereference(const string& section, const string& key, const strin
     ref_trace.emplace_back(move(key_path));
   }
   size_t pos;
-  if (!path.compare(2, 4, "env:")) {
-    return dereference_env(path.substr(6));
-  } else if (!path.compare(2, 5, "xrdb:")) {
-    return dereference_xrdb(path.substr(7));
-  } else if (!path.compare(2, 5, "file:")) {
-    return dereference_file(path.substr(7));
-  } else if (!path.compare(2, 6, "color:")) {
-    return dereference_color(path.substr(8), section, ref_trace);
-  } else if ((pos = path.find(".")) != string::npos) {
-    return dereference_local(path.substr(0, pos), path.substr(pos + 1), section, ref_trace);
+  if (!value.compare(2, 4, "env:")) {
+    value = dereference_env(value.substr(6));
+  } else if (!value.compare(2, 5, "xrdb:")) {
+    value = dereference_xrdb(value.substr(7));
+  } else if (!value.compare(2, 5, "file:")) {
+    value = dereference_file(value.substr(7));
+  } else if (!value.compare(2, 6, "color:")) {
+    value = dereference_color(value.substr(8), section, ref_trace);
+  } else if ((pos = value.find(".")) != string::npos) {
+    value = dereference_local(value.substr(2, pos), value.substr(pos + 1), section, ref_trace);
   } else {
     throw value_error("Invalid reference defined at \"" + section + "." + key + "\"");
   }
-}
-
-string dereference_color(string value, string current_section, vector<string>& ref_trace) const {
-  auto pos = value.find(".");
-  auto pos2 = value.find(";");
-  string color;
-  if (pos == string::npos || (pos2 != string::npos && pos > pos2)) {
-		color = pos2 == string::npos ? move(value) : value.substr(0, pos2);
-  } else {
-    auto section = value.substr(0, pos);
-    pos++;
-    auto key = pos2 == string::npos ? value.substr(pos) : value.substr(pos,pos2-pos);
-    color = dereference_local<string>(move(section), move(key), move(current_section), ref_trace);
-  }
-  if (pos2 != string::npos) {
-    auto base_color = rgba::get_rgba(color);
-    double3 jab(base_color);
-    colorspaces::rgb_xyz(jab, jab);
-    colorspaces::xyz_jzazbz(jab, jab);
-    colorspaces::ab_ch(jab, jab);
-    bool ended;
-    do {
-      pos = pos2 + 1;
-      pos2 = value.find(";", pos);
-      if (pos2 == string::npos) {
-        pos2 = value.size();
-        ended = true;
-      } else ended = false;
-
-      // find the operator of the command
-      size_t op_pos = pos;
-      string operators = "+-*/=";
-      for (; op_pos < pos2; op_pos++) {
-        if (operators.find(value[op_pos]) != string::npos) break;
-      }
-
-      if (op_pos == pos2) {
-        throw value_error("Invalid color reference defined at \"" + ref_trace.back() + "\"");
-      }
-
-      auto property = string_util::trim(string_util::lower(value.substr(pos, op_pos - pos)));
-      auto amount = std::stod(&value[op_pos + 1]);
-      double* modified;
-      if config::(property == "lum" || property == "lightness" || property == "luminosity") {
-        modified = &jab.a;
-      else if (property == "chroma" || property == "sat" || property == "saturation") {
-        modified = &jab.b;
-      else if (property == "hue") {
-        modified = &jab.c;
-      else if (property == "alpha" || property == "opacity") {
-        modified = &base_color.a;
-      else {
-        throw value_error("Invalid color property \"" + property + "\" defined at \"" + ref_trace.back() + "\"");
-      }
-
-      switch (value[op_pos]) {
-        case '+': *modified += amount; break;
-        case '-': *modified -= amount; break;
-        case '*': *modified *= amount; break;
-        case '/': *modified /= amount; break;
-        case '=': *modified = amount; break;
-        default: throw value_error("Unexpected error, this is a bug, please report!");
-      }
-    } while (!ended);
-    colorspaces::ch_ab(jab, jab);
-    colorspaces::jzazbz_xyz(jab, jab);
-    colorspaces::xyz_rgb(jab, jab);
-    jab.copy_to(base_color);
-    color = color_util::hex<unsigned short int>(base_color);
-  }
-  return color;
+  return true;
 }
 
 string config::dereference_color(string&& value, const string& current_section, vector<string>& ref_trace) const {
@@ -347,8 +244,8 @@ string config::dereference_color(string&& value, const string& current_section, 
   } else {
     auto section = value.substr(0, pos);
     pos++;
-    auto key = pos2 == string::npos ? value.substr(pos) : value.substr(pos, pos2-pos);
-    color = dereference_local<string>(move(section), move(key), current_section, ref_trace);
+    auto key = pos2 == string::npos ? value.substr(pos) : value.substr(pos,pos2-pos);
+    color = dereference_local(move(section), move(key), move(current_section), ref_trace);
   }
   if (pos2 != string::npos) {
     auto base_color = rgba::get_rgba(color);
@@ -409,7 +306,7 @@ string config::dereference_color(string&& value, const string& current_section, 
   return color;
 }
 
-string config::dereference_local(string section, string&& key, const string& current_section, vector<string>& ref_trace) const {
+string config::dereference_local(string&& section, string&& key, const string& current_section, vector<string>& ref_trace) const {
   if (section == "BAR") {
     m_log.warn("${BAR.key} is deprecated. Use ${root.key} instead");
   }
@@ -425,8 +322,9 @@ string config::dereference_local(string section, string&& key, const string& cur
     real_key = key.substr(0, pos);
   } else real_key = move(key);
 
-  auto result = get_guarded(section, real_key, ref_trace
-  return dereference(move(section), move(real_key), result, move(result), ref_trace);
+  auto value = get_guarded(section, real_key, fallback, ref_trace);
+  dereference(section, real_key, value, ref_trace);
+  return value;
 }
 
 string config::dereference_env(string&& var) const {
@@ -480,11 +378,11 @@ string config::dereference_xrdb(string&& var) const {
   try {
     auto value = m_xrm->require<string>(var.c_str());
     m_log.info("Found matching X resource \"%s\" (value=%s)", var, value);
-    return move(value);
+    return value;
   } catch (const xresource_error& err) {
     if (has_fallback) {
       m_log.info("%s, using defined fallback value \"%s\"", err.what(), fallback);
-      return move(fallback);
+      return fallback;
     }
     throw value_error(sstream() << err.what() << " (no fallback set)");
   }
@@ -507,10 +405,126 @@ string config::dereference_file(string&& var) const {
     return string_util::trim(file_util::contents(var), '\n');
   } else if (has_fallback) {
     m_log.info("File reference \"%s\" not found, using defined fallback value \"%s\"", var, fallback);
-    return move(fallback);
+    return fallback;
   } else {
     throw value_error(sstream() << "The file \"" << var << "\" does not exist (no fallback set)");
   }
+}
+
+
+template <>
+string config::convert(string&& value) const {
+  return forward<string>(value);
+}
+
+template <>
+const char* config::convert(string&& value) const {
+  return value.c_str();
+}
+
+template <>
+char config::convert(string&& value) const {
+  return value.c_str()[0];
+}
+
+template <>
+int config::convert(string&& value) const {
+  return std::strtol(value.c_str(), nullptr, 10);
+}
+
+template <>
+short config::convert(string&& value) const {
+  return static_cast<short>(std::strtol(value.c_str(), nullptr, 10));
+}
+
+template <>
+bool config::convert(string&& value) const {
+  string lower{string_util::lower(forward<string>(value))};
+
+  return (lower == "true" || lower == "yes" || lower == "on" || lower == "1");
+}
+
+template <>
+float config::convert(string&& value) const {
+  return std::strtof(value.c_str(), nullptr);
+}
+
+template <>
+double config::convert(string&& value) const {
+  return std::strtod(value.c_str(), nullptr);
+}
+
+template <>
+long config::convert(string&& value) const {
+  return std::strtol(value.c_str(), nullptr, 10);
+}
+
+template <>
+long long config::convert(string&& value) const {
+  return std::strtoll(value.c_str(), nullptr, 10);
+}
+
+template <>
+unsigned char config::convert(string&& value) const {
+  return std::strtoul(value.c_str(), nullptr, 10);
+}
+
+template <>
+unsigned short config::convert(string&& value) const {
+  return std::strtoul(value.c_str(), nullptr, 10);
+}
+
+template <>
+unsigned int config::convert(string&& value) const {
+  return std::strtoul(value.c_str(), nullptr, 10);
+}
+
+template <>
+unsigned long config::convert(string&& value) const {
+  unsigned long v{std::strtoul(value.c_str(), nullptr, 10)};
+  return v < ULONG_MAX ? v : 0UL;
+}
+
+template <>
+unsigned long long config::convert(string&& value) const {
+  unsigned long long v{std::strtoull(value.c_str(), nullptr, 10)};
+  return v < ULLONG_MAX ? v : 0ULL;
+}
+
+template <>
+chrono::seconds config::convert(string&& value) const {
+  return chrono::seconds{convert<chrono::seconds::rep>(forward<string>(value))};
+}
+
+template <>
+chrono::milliseconds config::convert(string&& value) const {
+  return chrono::milliseconds{convert<chrono::milliseconds::rep>(forward<string>(value))};
+}
+
+template <>
+chrono::duration<double> config::convert(string&& value) const {
+  return chrono::duration<double>{convert<double>(forward<string>(value))};
+}
+
+template <>
+rgba config::convert(string&& value) const {
+  return rgba::get_rgba(value);
+}
+
+template <>
+cairo_operator_t config::convert(string&& value) const {
+  return cairo::utils::str2operator(forward<string>(value), CAIRO_OPERATOR_OVER);
+}
+
+template <>
+colorspaces::type config::convert(string&& value) const {
+  string lower{string_util::lower(forward<string>(value))};
+  if (lower == "jzazbz") {
+     return colorspaces::type::Jzazbz;
+  } else if (lower == "jch") {
+     return colorspaces::type::Jch;
+  }
+  throw value_error("Invalid colorspace '" + value + "'");
 }
 
 POLYBAR_NS_END

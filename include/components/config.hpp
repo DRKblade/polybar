@@ -48,42 +48,50 @@ class config {
 
   void set(const string& section, const string& key, string&& value);
 
-  string get(const string& key) const;
+	template<typename T = string>
+  T get(const string& key) const;
 
-  string get(const string& section, const string& key) const;
+	template<typename T = string>
+  T get(const string& section, const string& key) const;
 
-  string get(const string& section, const string& key, const string& default_value) const;
+	template<typename T = string>
+  T get(const string& section, const string& key, const T& default_value) const;
 
-  gradient_t get_gradient(const string& name) const;
+  gradient_t get_gradient(const string&) const;
 
   string get_color(const string& section, const string& key, const string& default_value) const;
 
   vector<string> get_list(const string& key) const;
 
+  vector<string> get_list_throw(const string& section, const string& key) const;
+
   vector<string> get_list(const string& section, const string& key) const;
 
-  vector<string> get_list(const string& section, const string& key, const vector<string>& default_value) const;
+	template<typename T = string>
+  T deprecated(const string& section, const string& old, const string& newkey, const T& fallback) const;
 
-  string deprecated(const string& section, const string& old, const string& newkey, const string& fallback) const;
-
-  string deprecated_list(const string& section, const string& old, const string& newkey, const vector<string>& fallback) const;
+  vector<string> deprecated_list(const string& section, const string& old, const string& newkey) const;
 
  protected:
   bool try_get(const string& section, const string& key, string& result) const;
 
   void try_get_list(const string& section, const string& key, vector<string>& result) const;
 
-  string get_guarded(const string& section, const string& key, vector<string>& ref_trace) const;
+  string get_guarded(const string& section, const string& key, const string& default_value, vector<string>& ref_trace) const;
 
   void copy_inherited();
 
-  string dereference(const string& section, const string& key, const string& var, const string& fallback) const;
+ private:
+  template<typename T>
+  T convert(string&& value) const;
 
-  string dereference(const string& section, const string& key, const string& var, const string& fallback, vector<string> ref_trace) const;
+  bool dereference(const string& section, const string& key, string& value) const;
+
+  bool dereference(const string& section, const string& key, string& value, vector<string> ref_trace) const;
 
   string dereference_color(string&& value, const string& current_section, vector<string>& ref_trace) const;
 
-  string dereference_local(string section, string&& key, const string& current_section, vector<string>& ref_trace) const;
+  string dereference_local(string&& section, string&& key, const string& current_section, vector<string>& ref_trace) const;
 
   string dereference_env(string&& var) const;
 
@@ -91,7 +99,6 @@ class config {
 
   string dereference_file(string&& var) const;
 
- private:
   const logger& m_log;
   string m_file;
   string m_barname;
@@ -107,5 +114,42 @@ class config {
   unique_ptr<xresource_manager> m_xrm;
 #endif
 };
+
+template<typename T>
+T config::get(const string& key) const {
+  return get<T>(section(), key);
+}
+
+template<typename T>
+T config::get(const string& section, const string& key) const {
+  string value;
+  if (!try_get(section, key, value)) {
+    throw key_error("Missing parameter \"" + section + "." + key + "\"");
+  }
+  dereference(section, key, value);
+  return convert<T>(move(value));
+}
+
+template<typename T>
+T config::get(const string& section, const string& key, const T& default_value) const {
+  string value;
+  if (!try_get(section, key, value)) {
+    return default_value;
+  }
+  if (!dereference(section, key, value))
+    return default_value;
+  return convert<T>(move(value));
+}
+
+template<typename T>
+T config::deprecated(const string& section, const string& old, const string& newkey, const T& fallback) const {
+  try {
+    auto value = get(section, old);
+    warn_deprecated(section, old, newkey);
+    return convert<T>(move(value));
+  } catch (const key_error& err) {
+    return get(section, newkey, fallback);
+  }
+}
 
 POLYBAR_NS_END

@@ -98,7 +98,7 @@ namespace drawtypes {
 
     auto pbar = factory_util::shared<progressbar>(bar, width, format);
     pbar->set_gradient(conf.get(section, name + "-gradient", true));
-    pbar->set_colors(conf.get_list(section, name + "-foreground", {}));
+    pbar->set_colors(conf.get_list(section, name + "-foreground"));
 
     label_t icon_empty;
     label_t icon_fill;

@@ -207,8 +207,8 @@ bar::bar(connection& conn, signal_emitter& emitter, const config& config, const 
   };
 
   // Load background
-  for (auto&& step : m_conf.get_list<rgba>(bs, "background", {})) {
-    m_opts.background_steps.emplace_back(step);
+  for (auto&& step : m_conf.get_list(bs, "background")) {
+    m_opts.background_steps.emplace_back(rgba::get_rgba(step));
   }
 
   if (!m_opts.background_steps.empty()) {

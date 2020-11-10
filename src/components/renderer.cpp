@@ -144,7 +144,7 @@ renderer::renderer(connection& conn, signal_emitter& sig, const config& conf, co
 
     m_log.info("Configured DPI = %gx%g", dpi_x, dpi_y);
 
-    auto fonts = m_conf.get_list<string>(m_conf.section(), "font", {});
+    auto fonts = m_conf.get_list(m_conf.section(), "font");
     if (fonts.empty()) {
       m_log.warn("No fonts specified, using fallback font \"fixed\"");
       fonts.emplace_back("fixed");

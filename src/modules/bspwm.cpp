@@ -142,7 +142,7 @@ namespace modules {
     m_icons = factory_util::shared<iconset>();
     m_icons->add(DEFAULT_ICON, factory_util::shared<label>(m_conf.get(name(), DEFAULT_ICON, ""s)));
 
-    for (const auto& workspace : m_conf.get_list<string>(name(), "ws-icon", {})) {
+    for (const auto& workspace : m_conf.get_list(name(), "ws-icon")) {
       auto vec = string_util::tokenize(workspace, ';');
       if (vec.size() == 2) {
         m_icons->add(vec[0], factory_util::shared<label>(vec[1]));

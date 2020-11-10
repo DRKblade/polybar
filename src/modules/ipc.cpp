@@ -15,7 +15,7 @@ namespace modules {
   ipc_module::ipc_module(const bar_settings& bar, string name_) : static_module<ipc_module>(bar, move(name_)) {
     size_t index = 0;
 
-    for (auto&& command : m_conf.get_list<string>(name(), "hook")) {
+    for (auto&& command : m_conf.get_list_throw(name(), "hook")) {
       m_hooks.emplace_back(new hook{name() + to_string(++index), command});
     }
 
