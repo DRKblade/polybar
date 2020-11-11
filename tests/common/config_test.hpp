@@ -1,22 +1,15 @@
 #pragma once
 
-#include <string>
-
-#include "drawtypes/label.hpp"
+#include "components/config.hpp"
 #include "components/config_parser.hpp"
 
 POLYBAR_NS
 
-std::string get_text(label_t label) {
-  label->reset_tokens();
-  return label->get();
-}
+logger _log(loglevel::NONE);
 
-config::make_type load_config(std::string&& path, std::string&& bar) {
-  logger log(loglevel::NONE);
-  string config_txt = path;
-  config_parser parser(log, move(config_txt), move(bar));
-  return move(parser.parse());
+config::make_type load_config(string&& path = "./test_config.ini", string&& bar = "example") {
+  config_parser parser(_log, move(path), move(bar));
+  return parser.parse();
 }
 
 POLYBAR_NS_END

@@ -34,19 +34,30 @@ add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
 add_custom_target(all_unit_tests
     COMMENT "Building all unit test")
 
-function(add_unit_test source_file)
+function(add_unit_test_base source_file copy_ini)
   string(REPLACE "/" "_" testname ${source_file})
+  set(source_path unit_tests/${source_file})
   set(name "unit_test.${testname}")
 
-  add_executable(${name} unit_tests/${source_file}.cpp)
+  add_executable(${name} ${source_path}.cpp)
 
   # Link against gmock (this automatically links against gtest)
   target_link_libraries(${name} poly gmock_main)
   add_test(NAME ${name} COMMAND ${name})
 
   add_dependencies(all_unit_tests ${name})
+	if (copy_ini)
+  	configure_file(${source_path}.ini resources/${testname}.ini COPYONLY)
+	endif()
 endfunction()
-configure_file(test_config.ini ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+
+function(add_unit_test source_file)
+	add_unit_test_base(${source_file} 0)
+endfunction()
+
+function(add_unit_test_ini source_file)
+	add_unit_test_base(${source_file} 1)
+endfunction()
 
 add_unit_test(utils/color)
 add_unit_test(utils/colorspaces)
@@ -60,6 +71,7 @@ add_unit_test(utils/file)
 add_unit_test(components/command_line)
 add_unit_test(components/bar)
 add_unit_test(components/parser)
+add_unit_test_ini(components/config)
 add_unit_test(components/config_parser)
 add_unit_test(drawtypes/label)
 add_unit_test(drawtypes/ramp)

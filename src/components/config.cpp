@@ -86,11 +86,11 @@ void config::set(const string& section, const string& key, string&& value) {
 
 bool config::try_get(const string& section, const string& key, string& result) const {
   auto it = m_sections.find(section);
-  if (it == m_sections.end() || it->second.find(key) == it->second.end()) {
+  if (it != m_sections.end() && it->second.find(key) != it->second.end()) {
     result = it->second.at(key);
     return true;
   }
-  return true;
+  return false;
 }
 
 string config::get_guarded(const string& section, const string& key, const string& default_value, vector<string>& ref_trace) const {
@@ -228,7 +228,9 @@ bool config::dereference(const string& section, const string& key, string& value
   } else if (!value.compare(2, 6, "color:")) {
     value = dereference_color(value.substr(8), section, ref_trace);
   } else if ((pos = value.find(".")) != string::npos) {
-    value = dereference_local(value.substr(2, pos), value.substr(pos + 1), section, ref_trace);
+    value = dereference_local(value.substr(2, pos - 2),
+                              value.substr(pos + 1, value.length() - pos - 2),
+                              section, ref_trace);
   } else {
     throw value_error("Invalid reference defined at \"" + section + "." + key + "\"");
   }
@@ -316,15 +318,20 @@ string config::dereference_local(string&& section, string&& key, const string& c
   section = string_util::replace(section, "self", current_section, 0, 4);
 
   size_t pos;
-  string real_key, fallback;
+  string value;
   if ((pos = key.find(':')) != string::npos) {
-    fallback = key.substr(pos + 1);
-    real_key = key.substr(0, pos);
-  } else real_key = move(key);
-
-  auto value = get_guarded(section, real_key, fallback, ref_trace);
-  dereference(section, real_key, value, ref_trace);
-  return value;
+    auto fallback = key.substr(pos + 1);
+    key = key.substr(0, pos);
+    if (try_get(section, key, value)) {
+      dereference(section, key, value, ref_trace);
+      return value;
+    } else return fallback;
+  } else {
+    if (try_get(section, key, value)) {
+      dereference(section, key, value, ref_trace);
+      return value;
+    } else throw key_error("Deref-local: Parameter '" + section + "." + key + "' not found, and no fallback is provided");
+  }
 }
 
 string config::dereference_env(string&& var) const {

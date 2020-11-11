@@ -72,18 +72,9 @@ class config {
 
   vector<string> deprecated_list(const string& section, const string& old, const string& newkey) const;
 
- protected:
   bool try_get(const string& section, const string& key, string& result) const;
 
   void try_get_list(const string& section, const string& key, vector<string>& result) const;
-
-  string get_guarded(const string& section, const string& key, const string& default_value, vector<string>& ref_trace) const;
-
-  void copy_inherited();
-
- private:
-  template<typename T>
-  T convert(string&& value) const;
 
   bool dereference(const string& section, const string& key, string& value) const;
 
@@ -98,6 +89,15 @@ class config {
   string dereference_xrdb(string&& var) const;
 
   string dereference_file(string&& var) const;
+
+ protected:
+  string get_guarded(const string& section, const string& key, const string& default_value, vector<string>& ref_trace) const;
+
+  void copy_inherited();
+
+ private:
+  template<typename T>
+  T convert(string&& value) const;
 
   const logger& m_log;
   string m_file;
