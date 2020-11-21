@@ -16,16 +16,16 @@ namespace drawtypes {
 
   void labellist::apply_gradient(label_t& label, float percentage) {
     if (m_foreground_grad) {
-      label->m_foreground = m_foreground_grad->get_by_percentage(percentage);
+      label->m_foreground = m_foreground_grad->get_by_percentage_raw(percentage);
     }
     if (m_background_grad) {
-      label->m_background = m_background_grad->get_by_percentage(percentage);
+      label->m_background = m_background_grad->get_by_percentage_raw(percentage);
     }
     if (m_underline_grad) {
-      label->m_underline = m_underline_grad->get_by_percentage(percentage);
+      label->m_underline = m_underline_grad->get_by_percentage_raw(percentage);
     }
     if (m_overline_grad) {
-      label->m_overline = m_overline_grad->get_by_percentage(percentage);
+      label->m_overline = m_overline_grad->get_by_percentage_raw(percentage);
     }
   }
 

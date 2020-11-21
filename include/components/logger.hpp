@@ -100,7 +100,9 @@ class logger {
   /**
    * Convert string
    */
-  const char* convert(string arg) const;  // NOLINT
+  const char* convert(string& arg) const;  // NOLINT
+  const char* convert(const string& arg) const;  // NOLINT
+  const char* convert(string&& arg) const;  // NOLINT
 
   /**
    * Convert thread id
@@ -125,7 +127,8 @@ class logger {
 #pragma GCC diagnostic ignored "-Wformat-security"
 #endif  // }}}
 
-    dprintf(m_fd, (m_prefixes.at(level) + format + m_suffixes.at(level) + "\n").c_str(), convert(values)...);
+    dprintf(m_fd, (m_prefixes.at(level) + format + m_suffixes.at(level) + "\n")
+        .c_str(), convert(values)...);
 
 #if defined(__clang__)  // {{{
 #pragma clang diagnostic pop

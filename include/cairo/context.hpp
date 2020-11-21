@@ -56,8 +56,16 @@ namespace cairo {
       return *this;
     }
 
-    context& operator<<(const color& c) {
+    context& operator<<(const bigcolor& c) {
+      if (c.colorspace != colorspaces::type::RGB)
+        throw application_error("Context: Colorspace is not RGB");
       cairo_set_source_rgba(m_c, c.a, c.b, c.c, c.d);
+      return *this;
+    }
+
+    context& operator<<(const smallcolor& c) {
+      cairo_set_source_rgba(m_c, c.comp.r/225.0, c.comp.g/225.0,
+                            c.comp.b/225.0, c.comp.a/225.0);
       return *this;
     }
 
@@ -98,16 +106,11 @@ namespace cairo {
     }
 
     context& operator<<(const linear_gradient& l) {
-      auto stops = l.steps.size();
-      if (stops >= 2) {
+      if (l.grad->is_valid()) {
         auto pattern = cairo_pattern_create_linear(l.x1, l.y1, l.x2, l.y2);
-        auto step = 1.0 / (stops - 1);
-        auto offset = 0.0;
-        for (auto& color : l.steps) {
-          // clang-format off
-          cairo_pattern_add_color_stop_rgba(pattern, offset, color.a, color.b, color.c, color.d);
-          // clang-format on
-          offset += step;
+        for (const auto& point : l.grad->get_points()) {
+          cairo_pattern_add_color_stop_rgba(pattern, point.position,
+                    point.value.a, point.value.b, point.value.c, point.value.d);
         }
         *this << pattern;
         cairo_pattern_destroy(pattern);

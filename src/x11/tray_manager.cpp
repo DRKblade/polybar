@@ -125,15 +125,9 @@ void tray_manager::setup(const bar_settings& bar_opts) {
   }
 
   // Set user-defined background color
-  auto bg = conf.get(bs, "tray-background", ""s);
+	m_opts.background = conf.get(bs, "tray-background", bar_opts.background);
 
-  if (!bg.empty()) {
-    m_opts.background = color_util::parse(bg);
-  } else {
-    m_opts.background = bar_opts.background;
-  }
-
-  if (color_util::alpha_channel<unsigned char>(m_opts.background) != 255) {
+  if (m_opts.background.comp.a != 255) {
     m_log.trace("tray: enable transparency");
     m_opts.transparent = true;
   }
@@ -486,8 +480,8 @@ void tray_manager::create_window() {
   // clang-format on
 
   if (!m_opts.transparent) {
-    win << cw_params_back_pixel(m_opts.background);
-    win << cw_params_border_pixel(m_opts.background);
+    win << cw_params_back_pixel(m_opts.background.code);
+    win << cw_params_border_pixel(m_opts.background.code);
   }
 
   m_tray = win << cw_flush(true);
@@ -640,8 +634,7 @@ void tray_manager::set_wm_hints() {
 void tray_manager::set_tray_colors() {
   m_log.trace("tray: Set _NET_SYSTEM_TRAY_COLORS to %x", m_opts.background);
 
-	unsigned char r, g, b;
-	split_channels(m_opts.background, r, g, b);
+	auto& r = m_opts.background.comp.r, g = m_opts.background.comp.g, b = m_opts.background.comp.b;
 
   const unsigned int colors[12] = {
       r, g, b,  // normal

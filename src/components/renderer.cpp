@@ -241,7 +241,7 @@ void renderer::begin(xcb_rectangle_t rect) {
         static_cast<double>(m_rect.width),
         static_cast<double>(m_rect.height), m_bar.radius};
     // clang-format on
-    *m_context << color::white();
+    *m_context << bigcolor::white();
     m_context->fill();
     m_context->pop(&m_cornermask);
     m_context->restore();
@@ -385,8 +385,9 @@ void renderer::flush(alignment a) {
     *m_context << cairo::abspos{0.0, 0.0};
     *m_context << cairo::rect{x + visible_width - fsize, y, fsize, h};
     m_context->clip(true);
-    *m_context << cairo::linear_gradient{x + visible_width - fsize, y, x + visible_width, y,
-                                         {color::transparent(), color::black()}};
+    auto grad = factory_util::singleton<gradient>(bigcolor::transparent(), bigcolor::black());
+    *m_context << cairo::linear_gradient{x + visible_width - fsize, y,
+                                         x + visible_width, y, grad};
     m_context->paint(0.25);
     m_context->restore();
   }
@@ -581,8 +582,8 @@ void renderer::fill_background() {
   m_context->save();
   *m_context << m_comp_bg;
 
-  if (!m_bar.background_steps.empty()) {
-    m_log.trace_x("renderer: gradient background (steps=%lu)", m_bar.background_steps.size());
+  if (m_bar.background_steps) {
+    m_log.trace_x("renderer: gradient background");
     *m_context << cairo::linear_gradient{0.0, 0.0 + m_rect.y, 0.0, 0.0 + m_rect.height, m_bar.background_steps};
   } else {
     m_log.trace_x("renderer: solid background #%08x", m_bar.background);
@@ -596,7 +597,7 @@ void renderer::fill_background() {
 /**
  * Fill overline color
  */
-void renderer::fill_overline(double x, double w, color color) {
+void renderer::fill_overline(double x, double w, bigcolor color) {
   m_log.trace_x("renderer: overline(x=%f, w=%f)", x, w);
   m_context->save();
   *m_context << m_comp_ol;
@@ -609,7 +610,7 @@ void renderer::fill_overline(double x, double w, color color) {
 /**
  * Fill underline color
  */
-void renderer::fill_underline(double x, double w, color color) {
+void renderer::fill_underline(double x, double w, bigcolor color) {
   m_log.trace_x("renderer: underline(x=%f, w=%f)", x, w);
   m_context->save();
   *m_context << m_comp_ul;
@@ -666,13 +667,13 @@ void renderer::fill_borders() {
   m_context->restore();
 }
 
-color renderer::parse_color(const string& value, color fallback) {
+bigcolor renderer::parse_color(const string& value, const bigcolor& fallback) {
   if (value.compare(0, 5, "anim:") == 0) {
     m_anim_used = true;
     return parse_animated_color(m_conf, value.substr(5))->get(m_time);
   }
   if (!value.empty() && value[0] != '-') {
-		return color::parse(value, fallback);
+		return bigcolor::parse(value, fallback);
   }
   return fallback;
 }
@@ -688,19 +689,15 @@ void renderer::draw_text(const string& contents) {
   block.font = m_font;
   block.x_advance = &m_blocks[m_align].x;
   block.y_advance = &m_blocks[m_align].y;
-	block.bg = parse_color(m_bg, m_bar.background);
-  // Only draw text background if the color differs from
-  // the background color of the bar itself
-  // Note: this means that if the user explicitly set text
-  // background color equal to background-0 it will be ignored
-  if (block.bg != m_bar.background) {
+  if (!m_bg.empty() && m_bg[0] != '-') {
+  	block.bg = parse_color(m_bg, m_bar.background);
     block.bg_operator = m_comp_bg;
     block.bg_rect.x = m_rect.x;
     block.bg_rect.y = m_rect.y;
     block.bg_rect.h = m_rect.height;
-  } else block.bg = 0;
+  } else block.bg = bigcolor::transparent();
 
-  unsigned int fg = parse_color(m_fg, m_bar.foreground);
+  auto fg = parse_color(m_fg, m_bar.foreground);
   
 	m_context->save();
   *m_context << origin;

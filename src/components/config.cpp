@@ -199,16 +199,15 @@ bool config::dereference(const string& section, const string& key, string& value
   if (value.compare(0, 2, "${") || value.back() != '}') {
     return false;
   }
-	{
-    string key_path = section + "." + key;
-    if (find(ref_trace.begin(), ref_trace.end(), key_path) != ref_trace.end()) {
-      string ref_str{};
-      for (const auto& p : ref_trace) {
-        ref_str += ">\t" + p + "n";
-      }
-      ref_str += ">\t" + key_path;
-      throw application_error(key_path + ": Dependency cycle detected:\n" + ref_str);
+  if (auto key_path = section + "." + key;
+  		find(ref_trace.begin(), ref_trace.end(), key_path) != ref_trace.end()) {
+    string ref_str{};
+    for (const auto& p : ref_trace) {
+      ref_str += ">\t" + p + "n";
     }
+    ref_str += ">\t" + key_path;
+    throw application_error(key_path + ": Dependency cycle detected:\n" + ref_str);
+  } else {
     ref_trace.emplace_back(move(key_path));
   }
   size_t pos;
@@ -245,7 +244,7 @@ string config::dereference_color(string&& value, const string& current_section, 
   if (pos2 == string::npos) {
     return color_str;
   } else {
-    auto color = color::parse(color_str);
+    auto color = bigcolor::parse(color_str);
     color.set_colorspace(colorspaces::type::Jzazbz);
     bool ended;
     do {
@@ -277,7 +276,7 @@ string config::dereference_color(string&& value, const string& current_section, 
       } else if (property == "hue") {
         modified = &color.c;
       } else if (property == "alpha" || property == "opacity") {
-        modified = &color.a;
+        modified = &color.d;
       } else {
         throw value_error("Invalid color property \"" + property + "\" defined at \"" + ref_trace.back() + "\"");
       }
@@ -506,8 +505,13 @@ cairo_operator_t config::convert(string&& value) const {
 }
 
 template<>
-color config::convert(string&& value) const {
-  return color::parse(value);
+bigcolor config::convert(string&& value) const {
+  return bigcolor::parse(value);
+}
+
+template<>
+smallcolor config::convert(string&& value) const {
+  return smallcolor::parse(value);
 }
 
 template <>

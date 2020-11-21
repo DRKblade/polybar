@@ -9,6 +9,7 @@
 #include "components/taskqueue.hpp"
 #include "components/types.hpp"
 #include "drawtypes/label.hpp"
+#include "drawtypes/resources/gradient.hpp"
 #include "events/signal.hpp"
 #include "events/signal_emitter.hpp"
 #include "utils/bspwm.hpp"
@@ -198,19 +199,25 @@ bar::bar(connection& conn, signal_emitter& emitter, const config& config, const 
     }
   }
 
-  const auto parse = [&](string key, const color& def, color& result) {
+  const auto parse = [&](string key, const bigcolor& def, bigcolor& result) {
     string value;
-    if (!m_conf.try_get(bar_section, key, value) || !color::try_parse(value, result))
+    if (!m_conf.try_get(bar_section, key, value) || !bigcolor::try_parse(value, result))
       result = def;
   };
 
   // Load background
-  for (auto&& step : m_conf.get_list(bar_section, "background")) {
-    m_opts.background_steps.emplace_back(color::parse(step));
+
+  if (auto bg_steps_list = m_conf.get_list(bar_section, "background");
+  		bg_steps_list.size() >= 2) {
+    m_opts.background_steps = factory_util::shared<gradient>();
+    auto step = 1.0 / bg_steps_list.size();
+    for (size_t i = 0; i < bg_steps_list.size(); i++) {
+      m_opts.background_steps->add(bg_steps_list[i], step * i);
+    }
   }
 
-  if (!m_opts.background_steps.empty()) {
-    m_opts.background = m_opts.background_steps[0];
+  if (m_opts.background_steps) {
+    m_opts.background = m_opts.background_steps->get_by_percentage_raw(0);
 
     if (m_conf.has(bar_section, "background")) {
       m_log.warn("Ignoring `%s.background` (overridden by gradient background)", bar_section);
@@ -223,7 +230,7 @@ bar::bar(connection& conn, signal_emitter& emitter, const config& config, const 
   parse("foreground", m_opts.foreground, m_opts.foreground);
 
   // Load over-/underline
-  auto line_color = m_conf.get(bar_section, "line-color", color::red());
+  auto line_color = m_conf.get(bar_section, "line-color", bigcolor(1, 0, 0, 1));
   auto line_size = m_conf.get(bar_section, "line-size", 0);
 
   m_opts.overline.size = m_conf.get(bar_section, "overline-size", line_size);
@@ -232,7 +239,7 @@ bar::bar(connection& conn, signal_emitter& emitter, const config& config, const 
   parse("underline-color", line_color, m_opts.underline.color);
 
   // Load border settings
-  auto border_color = m_conf.get(bar_section, "border-color", color::transparent());
+  auto border_color = m_conf.get(bar_section, "border-color", bigcolor::transparent());
   auto border_size = m_conf.get(bar_section, "border-size", ""s);
   auto border_top = m_conf.deprecated(bar_section, "border-top", "border-top-size", border_size);
   auto border_bottom = m_conf.deprecated(bar_section, "border-bottom", "border-bottom-size", border_size);

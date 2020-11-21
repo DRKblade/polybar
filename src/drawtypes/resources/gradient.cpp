@@ -3,21 +3,58 @@
 #include "drawtypes/resources/gradient.hpp"
 #include "errors.hpp"
 #include "components/config.hpp"
+#include "utils/math.hpp"
 
 POLYBAR_NS
 
+gradient::gradient(bigcolor&& start, bigcolor&& end)
+		: m_colors{color_point(move(start), 0), color_point(move(end), 1)} {}  
+
+bigcolor gradient::interpolate(const bigcolor& min, const bigcolor& max, float percentage) {
+  bigcolor result(min);
+  result.a += (max.a - min.a) * percentage / 100.0f;
+  result.b += (max.b - min.b) * percentage / 100.0f;
+  result.c += (max.c - min.c) * percentage / 100.0f;
+  result.d += (max.d - min.d) * percentage / 100.0f;
+  return result;
+}
+
 void gradient::add(string color, float percentage) {
-  rgba c = rgba::get_rgba(color);
+  auto c = bigcolor::parse(color);
   if (!m_colors.empty() && m_colors.back().position > percentage)
     throw value_error("Position of color points must be in ascending order");
-  m_colors.emplace_back(color_point(c, percentage));
+  c.set_colorspace(colorspaces::type::RGB);
+  m_colors.emplace_back(color_point(move(c), percentage));
 }
 
-string gradient::get_by_percentage(float percentage) {
-  return get_by_percentage_raw(percentage).to_hex();
+void gradient::generate_points(size_t size, colorspaces::type colorspace) {
+  // convert all color points to target colorspace
+  for (color_point& point : m_colors) {
+    point.value.set_colorspace(colorspace);
+  }
+
+	// make a new array of color points using interpolation, then convert the points back to RGB
+  vector<color_point> new_color;
+  for (size_t i = 0; i < size; i++) {
+    float percentage = math_util::percentage<float>(i, 0, size-1);
+    color_point point(get_by_percentage_raw(percentage), percentage);
+    point.value.set_colorspace(colorspaces::type::RGB);
+    new_color.push_back(point);
+  }
+  m_colors = move(new_color);
 }
 
-rgba gradient::get_by_percentage_raw(float percentage) {
+bool gradient::is_valid() const {
+  if (m_colors.size() < 2 || m_colors[0].value.colorspace == colorspaces::type::RGB)
+    return false;
+  for (size_t i = 1; i < m_colors.size(); i++)
+    if (m_colors[i].position < m_colors[i-1].position &&
+        m_colors[i].value.colorspace == colorspaces::type::RGB)
+      return false;
+  return true;
+}
+
+bigcolor gradient::get_by_percentage_raw(float percentage) {
   if (m_colors.size() == 0) {
     throw color_error("Gradient have no color point");
   }
@@ -26,38 +63,13 @@ rgba gradient::get_by_percentage_raw(float percentage) {
     if (m_colors[upper].position >= percentage) break;
     
   if (upper <= 0) {
-    return m_colors.front().color;
+    return m_colors.front().value;
   } else if (upper >= m_colors.size()) {
-    return m_colors.back().color;
+    return m_colors.back().value;
   } else {
     auto interval_percentage = math_util::percentage(percentage, m_colors[upper-1].position, m_colors[upper].position);
-    return interpolate(m_colors[upper-1].color, m_colors[upper].color, interval_percentage);
+    return interpolate(m_colors[upper-1].value, m_colors[upper].value, interval_percentage);
   }
-}
-
-color gradient::interpolate(const color& min, const color& max, float percentage) {
-  color result(min);
-  result.a += (max.a - min.a) * percentage / 100.0f;
-  result.b += (max.b - min.b) * percentage / 100.0f;
-  result.c += (max.c - min.c) * percentage / 100.0f;
-  result.d += (max.d - min.d) * percentage / 100.0f;
-  return result;
-}
-void gradient::generate_points(size_t size, colorspaces::type colorspace) {
-  // convert all color points to target colorspace
-  for (color_point& point : m_colors) {
-    point.color.set_colorspace(colorspace);
-  }
-
-	// make a new array of color points using interpolation, then convert the points back to RGB
-  vector<color_point> new_color;
-  for (size_t i = 0; i < size; i++) {
-    float percentage = math_util::percentage<float>(i, 0, size-1);
-    color_point point(get_by_percentage_raw(percentage), percentage);
-    point.set_colorspace(colorspaces::type::RGB);
-    new_color.push_back(point);
-  }
-  m_colors = move(new_color);
 }
 
 gradient_t load_gradient(const config& conf, const string& section) {
@@ -72,7 +84,7 @@ gradient_t load_gradient(const config& conf, const string& section) {
 		// make sure color points are in ascending order
 		if (!colors.empty() && percentage < colors.back().position)
   		throw value_error("Position of color point at "	+ section + "." + "point-" + to_string(i) + "-position must be in ascending order");
-		colors.emplace_back(color_point(color::parse(points[i]), percentage));
+		colors.emplace_back(color_point(bigcolor::parse(points[i]), percentage));
   }
 
 	auto result = factory_util::shared<gradient>(move(colors));

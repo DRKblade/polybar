@@ -7,6 +7,7 @@
 
 #include "common.hpp"
 #include "utils/color.hpp"
+#include "drawtypes/resources/gradient.hpp"
 
 POLYBAR_NS
 
@@ -118,12 +119,12 @@ struct radius {
 };
 
 struct border_settings {
-  color color{1, 0, 0, 1};
+  bigcolor color{1, 0, 0, 1};
   unsigned int size{0U};
 };
 
 struct line_settings {
-  color color{1, 0, 0, 1};
+  bigcolor color{1, 0, 0, 1};
   unsigned int size{0U};
 };
 
@@ -166,9 +167,9 @@ struct bar_settings {
   side_values module_margin{0U, 0U};
   edge_values strut{0U, 0U, 0U, 0U};
 
-  color background{0, 1, 1, 1};
-  color foreground{1, 1, 1, 1};
-  vector<color> background_steps;
+  bigcolor background{0, 1, 1, 1};
+  bigcolor foreground{1, 1, 1, 1};
+  gradient_t background_steps;
 
   line_settings underline{};
   line_settings overline{};

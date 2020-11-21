@@ -4,7 +4,7 @@
 
 #include "common.hpp"
 #include "components/types.hpp"
-#include "utils/color.hpp"
+#include "drawtypes/resources/gradient.hpp"
 
 POLYBAR_NS
 
@@ -46,7 +46,7 @@ namespace cairo {
     double y1;
     double x2;
     double y2;
-    vector<color> steps;
+    gradient_t grad;
   };
   struct rounded_corners {
     double x;
@@ -59,7 +59,7 @@ namespace cairo {
     alignment align;
     string contents;
     int font;
-    color bg;
+    bigcolor bg;
     cairo_operator_t bg_operator;
     rect bg_rect;
     double *x_advance;

@@ -17,7 +17,7 @@ namespace drawtypes {
     void set_empty(label_t&& empty);
     void set_indicator(label_t&& indicator);
     void set_gradient(bool mode);
-    void set_colors(vector<string>&& colors);
+    void set_colors(vector<smallcolor>&& colors);
 
     string output(float percentage);
 
@@ -26,7 +26,7 @@ namespace drawtypes {
 
    private:
     builder& m_builder;
-    vector<string> m_colors;
+    vector<smallcolor> m_colors;
     string m_format;
     unsigned int m_width;
     unsigned int m_colorstep = 1;

@@ -31,7 +31,7 @@ namespace drawtypes {
     m_gradient = mode;
   }
 
-  void progressbar::set_colors(vector<string>&& colors) {
+  void progressbar::set_colors(vector<smallcolor>&& colors) {
     m_colors = forward<decltype(colors)>(colors);
 
     m_colorstep = m_colors.empty() ? 1 : m_width / m_colors.size();
@@ -98,7 +98,12 @@ namespace drawtypes {
 
     auto pbar = factory_util::shared<progressbar>(bar, width, format);
     pbar->set_gradient(conf.get(section, name + "-gradient", true));
-    pbar->set_colors(conf.get_list(section, name + "-foreground"));
+
+    vector<smallcolor> colors;
+    auto colors_str = conf.get_list(section, name + "-foreground");
+    for(size_t i = 0; i < colors_str.size(); i++)
+      colors.push_back(smallcolor::parse(colors_str[i]));
+    pbar->set_colors(move(colors));
 
     label_t icon_empty;
     label_t icon_fill;
@@ -119,10 +124,10 @@ namespace drawtypes {
     // avoid color bleed
     if (icon_empty && icon_indicator) {
       if (!icon_indicator->m_background.empty() && icon_empty->m_background.empty()) {
-        icon_empty->m_background = color_util::hex<unsigned short int>(bar.background);
+        icon_empty->m_background = bar.background;
       }
       if (!icon_indicator->m_foreground.empty() && icon_empty->m_foreground.empty()) {
-        icon_empty->m_foreground = color_util::hex<unsigned short int>(bar.foreground);
+        icon_empty->m_foreground = bar.foreground;
       }
     }
 

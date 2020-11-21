@@ -6,6 +6,7 @@
 #include "components/config.hpp"
 #include "components/types.hpp"
 #include "utils/mixins.hpp"
+#include "utils/color.hpp"
 
 POLYBAR_NS
 
@@ -20,10 +21,10 @@ namespace drawtypes {
 
   class label : public non_copyable_mixin<label> {
    public:
-    string m_foreground{};
-    string m_background{};
-    string m_underline{};
-    string m_overline{};
+    smallcolor m_foreground{};
+    smallcolor m_background{};
+    smallcolor m_underline{};
+    smallcolor m_overline{};
     int m_font{0};
     side_values m_padding{0U, 0U};
     side_values m_margin{0U, 0U};
@@ -40,11 +41,11 @@ namespace drawtypes {
     alignment m_alignment{alignment::LEFT};
     bool m_ellipsis{true};
 
-    explicit label(string text, int font) : m_font(font), m_text(text), m_tokenized(m_text) {}
-    explicit label(string text, string foreground = ""s, string background = ""s, string underline = ""s,
-        string overline = ""s, int font = 0, struct side_values padding = {0U, 0U},
-        struct side_values margin = {0U, 0U}, int minlen = 0, size_t maxlen = 0_z,
-        alignment label_alignment = alignment::LEFT, bool ellipsis = true, vector<token>&& tokens = {})
+    explicit label(string text,
+        smallcolor foreground, smallcolor background, smallcolor underline, smallcolor overline,
+        int font = 0, struct side_values padding = {0U, 0U}, struct side_values margin = {0U, 0U},
+        int minlen = 0, size_t maxlen = 0_z, alignment label_alignment = alignment::LEFT,
+        bool ellipsis = true, vector<token>&& tokens = {})
         : m_foreground(foreground)
         , m_background(background)
         , m_underline(underline)
@@ -61,6 +62,10 @@ namespace drawtypes {
         , m_tokens(forward<vector<token>>(tokens)) {
       assert(!m_ellipsis || (m_maxlen == 0 || m_maxlen >= 3));
     }
+    explicit label(string text, int font)
+    		: label(text, smallcolor::empty_value(), smallcolor::empty_value(),
+    		        smallcolor::empty_value(), smallcolor::empty_value(), font) {}
+    explicit label(string text) : label(text, 0) {}
 
     string get() const;
     string get_raw() const;

@@ -38,13 +38,11 @@ class builder {
   void cmd(mousebtn index, string action);
   void cmd(mousebtn index, string action, const label_t& label);
   void cmd_close();
-	void color(string color, syntaxtag tag);
-	void line_color(string color, attribute tag);
+	void color(smallcolor color, syntaxtag tag);
+	void line_color(smallcolor color, attribute tag);
 
  protected:
-	string color_hex(syntaxtag tag);
-
-  void line_color(const string& color);
+  void line_color(smallcolor color);
   void line_color_close();
   void tag_open(syntaxtag tag, const string& value);
   void tag_open(attribute attr);
@@ -56,15 +54,11 @@ class builder {
   string m_output;
 
   map<syntaxtag, int> m_tags{};
-  map<syntaxtag, string> m_colors{};
+  map<syntaxtag, smallcolor> m_colors{};
   map<attribute, bool> m_attrs{};
-  map<syntaxtag, bool> m_colors_closing{};
-  map<syntaxtag, string> m_colors_default{};
+  map<syntaxtag, bool> m_closing{};
 
   int m_fontindex{0};
-
-  string m_background{};
-  string m_foreground{};
 };
 
 POLYBAR_NS_END

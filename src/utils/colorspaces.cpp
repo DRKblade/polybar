@@ -1,17 +1,30 @@
 #include <cmath>
 #include "utils/colorspaces.hpp"
 #include "utils/color.hpp"
+#include "utils/string.hpp"
+#include "utils/math.hpp"
+#include "common.hpp"
 
 POLYBAR_NS
 
 namespace colorspaces {
 	
   color_error unk_colorspace(colorspaces::type t) {
-    return color_error("Unknown colorspace " + to_string(static_cast<int>(t)));
+    string name;
+    try {
+      name = to_string(t);
+  	} catch(color_error) {
+    	name = "number " + std::to_string(static_cast<int>(t));
+  	}
+  	return unk_colorspace(name);
+  }
+
+  color_error unk_colorspace(const string& type) {
+    return color_error("Unknown colorspace " + type);
   }
 
 	type to_type(string&& name) {
-  	name = string_util::lower(name);
+  	name = string_util::trim(string_util::lower(name));
   	if (name == "rgb")
   		return type::RGB;
   	if (name == "hsl")
@@ -20,6 +33,8 @@ namespace colorspaces {
   		return type::Jch;
   	if (name == "jzazbz")
   		return type::Jzazbz;
+  	if (name == "xyz")
+  		return type::XYZ;
   	throw unk_colorspace(name);
 	}
 
@@ -33,12 +48,14 @@ namespace colorspaces {
   			return "jch";
   		case type::Jzazbz:
   			return "jzazbz";
+  		case type::XYZ:
+  			return "xyz";
   		default:
-    		throw unk_colorspace("");
+    		throw unk_colorspace("number " + std::to_string(static_cast<int>(t)));
   	}
 	}
 
-	void rgb_hsl(const color& input, color& output) {
+	void rgb_hsl(const bigcolor& input, bigcolor& output) {
     double r = input.a, g = input.b, b = input.c;
     double max = math_util::max(r, math_util::max(g, b)),
     			 min = math_util::min(r, math_util::min(g, b));
@@ -58,7 +75,7 @@ namespace colorspaces {
     }
 	}
 	
-	void hsl_rgb(const color& input, color& output) {
+	void hsl_rgb(const bigcolor& input, bigcolor& output) {
   	double h = input.a, s = input.b, l = input.c;
 		if (input.b == 0.0) {
       output.a = output.b = output.c = l;
@@ -92,14 +109,14 @@ namespace colorspaces {
                        : 0.07739938080495357 * x;
   }
 
-  void xyz_rgb(const color& i, color& o, double white_lum) {
+  void xyz_rgb(const bigcolor& i, bigcolor& o, double white_lum) {
     double x = i.a, y = i.b, z = i.c;
     o.a = gamma(+ 0.03241003232976359  *x - 0.015373989694887858*y - 0.004986158819963629  *z) / white_lum;
     o.b = gamma(- 0.009692242522025166 *x + 0.01875929983695176 *y + 0.00041554226340084706*z) / white_lum;
     o.c = gamma(+ 0.0005563941985197545*x - 0.0020401120612391  *y + 0.010571489771875336  *z) / white_lum;
   }
   
-  void rgb_xyz(const color& i, color& o, double white_lum) {
+  void rgb_xyz(const bigcolor& i, bigcolor& o, double white_lum) {
     double r = inverse_gamma(i.a) * white_lum, g = inverse_gamma(i.b) * white_lum, b = inverse_gamma(i.c) * white_lum;
     o.a = 41.23865632529916  *r + 35.75914909206253 *g +  18.045049120356364*b;
     o.b = 21.26368216773238  *r + 71.51829818412506 *g +   7.218019648142546*b;
@@ -115,7 +132,7 @@ namespace colorspaces {
     return 1e4 * pow((0.8359375 - XX) / (18.6875*XX - 18.8515625), 6.277394636015326);
   }
 
-  void xyz_jzazbz(const color& i, color& o) {
+  void xyz_jzazbz(const bigcolor& i, bigcolor& o) {
     double Lp = perceptual_quantizer(0.674207838*i.a + 0.382799340*i.b - 0.047570458*i.c);
     double Mp = perceptual_quantizer(0.149284160*i.a + 0.739628340*i.b + 0.083327300*i.c);
     double Sp = perceptual_quantizer(0.070941080*i.a + 0.174768000*i.b + 0.670970020*i.c);
@@ -125,7 +142,7 @@ namespace colorspaces {
     o.a = (0.44 * Iz) / (1 - 0.56*Iz) - 1.6295499532821566e-11;
   }
 
-  void jzazbz_xyz(const color& i, color& o) {
+  void jzazbz_xyz(const bigcolor& i, bigcolor& o) {
     double Jz = i.a + 1.6295499532821566e-11;
     double Iz = Jz / (0.44 + 0.56*Jz);
     double L = inv_perceptual_quantizer(Iz + 1.386050432715393e-1*i.b + 5.804731615611869e-2*i.c);
@@ -136,7 +153,7 @@ namespace colorspaces {
     o.c = - 9.098281098284756e-02*L - 3.127282905230740e-01*M + 1.522766561305260e+00*S;
   }
 
-  void ab_ch(const color& i, color& o) {
+  void ab_ch(const bigcolor& i, bigcolor& o) {
     auto h = atan2(i.c, i.b);
     h = h > 0 ? (h / M_PI) * 180 : 360 + h / M_PI * 180;
     o.b = sqrt(i.b * i.b + i.c * i.c);
@@ -144,7 +161,7 @@ namespace colorspaces {
     o.a = i.a;
   }
 
-  void ch_ab(const color& i, color& o) {
+  void ch_ab(const bigcolor& i, bigcolor& o) {
     auto h = i.c / 180 * M_PI;
     auto chroma = i.b;
     o.b = cos(h) * chroma;

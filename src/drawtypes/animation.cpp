@@ -13,7 +13,6 @@ namespace drawtypes {
 
   label_t animation::get() {
     size_t t_frame = m_frame;
-    apply_gradient(m_labels[t_frame], math_util::percentage(static_cast<float>(t_frame * m_subframecount + m_subframe), 0.0f, static_cast<float>(m_framecount*m_subframecount)));
     return m_labels[t_frame];
   }
 

@@ -2,101 +2,67 @@
 #include "utils/color.hpp"
 
 using namespace polybar;
+using namespace polybar::colorspaces;
 
-
-TEST(String, rgb) {
-  unsigned int color{0x123456};
-  EXPECT_EQ(0, color_util::alpha_channel<unsigned char>(color));
-  EXPECT_EQ(0x12, color_util::red_channel<unsigned char>(color));
-  EXPECT_EQ(0x34, color_util::green_channel<unsigned char>(color));
-  EXPECT_EQ(0x3434, color_util::green_channel<unsigned short int>(color));
-  EXPECT_EQ(0x56, color_util::blue_channel<unsigned char>(color));
-
-  EXPECT_TRUE((0x33 + 0.5) / 256.0 == rgb{0xFF112233}.b);
-  EXPECT_TRUE((0x51 + 0.5) / 256.0 == rgb{0x88449933}.g);
-  EXPECT_TRUE(0xff0f0f0f == rgb{0xee111111});
-  EXPECT_TRUE(0xff0a141e == rgb{0x99112233});
+TEST(SmallColor, creation) {
+  smallcolor color{0xCC123456};
+  EXPECT_EQ(0xCC, color.comp.a);
+  EXPECT_EQ(0x12, color.comp.r);
+  EXPECT_EQ(0x34, color.comp.g);
+  EXPECT_EQ(0x56, color.comp.b);
 }
 
-TEST(String, rgba) {
-  unsigned int color{0xCC123456};
-  EXPECT_EQ(0xCCCC, color_util::alpha_channel<unsigned short int>(color));
-  EXPECT_EQ(0x1212, color_util::red_channel<unsigned short int>(color));
-  EXPECT_EQ(0x12, color_util::red_channel<unsigned char>(color));
-  EXPECT_EQ(0x3434, color_util::green_channel<unsigned short int>(color));
-  EXPECT_EQ(0x5656, color_util::blue_channel<unsigned short int>(color));
-
-  EXPECT_EQ((0xCC + 0.5) / 256.0, rgba{0xCC112233}.a);
-  EXPECT_EQ((0x99 + 0.5) / 256.0, rgba{0x88449933}.g);
-  EXPECT_EQ(0xFF111111, static_cast<unsigned int>(rgba{0xFF111111}));
-  EXPECT_EQ(0x00FFFFFF, static_cast<unsigned int>(rgba{0x00FFFFFF}));
+TEST(SmallColor, parse) {
+  vector<string> tests{"#12345678", "#123", "#1234", "#123456"};
+  vector<unsigned int> codes{0x12345678, 0xFF112233, 0x11223344, 0xFF123456};
+  for(size_t i = 0; i < tests.size(); i++) {
+    EXPECT_EQ(codes[i], smallcolor::parse(tests[i]).code);
+    EXPECT_EQ(tests[i], smallcolor(codes[i]).to_string());
+  }
 }
 
-TEST(String, hex) {
-  unsigned int colorA{0x123456};
-  EXPECT_EQ("#123456"s, color_util::hex<unsigned char>(colorA));
-  unsigned int colorB{0xCC123456};
-  EXPECT_EQ("#cc123456"s, color_util::hex<unsigned short int>(colorB));
-  unsigned int colorC{0x00ffffff};
-  EXPECT_EQ("#00ffffff"s, color_util::hex<unsigned short int>(colorC));
+TEST(BigColor, parseHex) {
+  EXPECT_THROW(bigcolor::parse("invalid"), application_error);
+  EXPECT_EQ(0x12345678, bigcolor::parse("#12345678").to_uint());
+//  EXPECT_EQ(0, bigcolor::parse("#00AA00AA").d);
+//  EXPECT_EQ(0, bigcolor::parse("#00aa00aa").b);
+//  EXPECT_NEAR(0.666667, bigcolor::parse("#00AA00AA").a, 0.001);
+//  EXPECT_NEAR(0.666667, bigcolor::parse("#00AA00AA").c, 0.001);
+//  EXPECT_EQ(0x00AA00AA, bigcolor::parse("#00aa00aa").to_uint());
+  EXPECT_EQ(0xFFFFFFFF, bigcolor::parse("#fff").to_uint());
+  EXPECT_EQ(0xFF112233, bigcolor::parse("#123").to_uint());
+  EXPECT_EQ(0xFF888888, bigcolor::parse("#888888").to_uint());
+  EXPECT_EQ(0x11223344, bigcolor::parse("#1234").to_uint());
+  EXPECT_EQ(0x1234567813572468UL, bigcolor::parse("#1234567813572468").to_ulong());
 }
 
-TEST(String, parseHex) {
-  EXPECT_EQ("#ffffffff", color_util::parse_hex("#fff"));
-  EXPECT_EQ("#ff112233", color_util::parse_hex("#123"));
-  EXPECT_EQ("#ff888888", color_util::parse_hex("#888888"));
-  EXPECT_EQ("#00aa00aa", color_util::parse_hex("#00aa00aa"));
+TEST(BigColor, parse) {
+  vector<string> tests{"hsl(0.1, 0.2, 0.3)", "jzAZBZ(0, 4,5.3)", "JCH (160, -1, 300)",
+  										 "hSl(.01 , 230 , -999, 0.69)", "xyz ( 199, -200, 696)", "", "rgb(0.5, 0.5, 0.5, 0.5)"};
+  vector<type> types{type::HSL, type::Jzazbz, type::Jch, type::HSL, type::XYZ, type::RGB, type::RGB};
+  vector<string> expected{"hsl(0.1, 0.2, 0.3, 1)", "jzazbz(0, 4, 5.3, 1)", "jch(160, -1, 300, 1)",
+  										 "hsl(0.01, 230, -999, 0.69)", "xyz(199, -200, 696, 1)", "#0fff", "#80808080"};
+  for(size_t i = 0; i < tests.size(); i++) {
+    EXPECT_EQ(types[i], bigcolor::parse(tests[i]).colorspace);
+    EXPECT_EQ(expected[i], bigcolor::parse(tests[i]).to_string()) << "Expected: " << tests[i];
+  }
 }
 
-TEST(String, parse) {
-  EXPECT_EQ(0, color_util::parse("invalid"));
-  EXPECT_EQ(0, color_util::parse("#f"));
-  EXPECT_EQ(0, color_util::parse("#ff"));
-  EXPECT_EQ(0xFF999999, color_util::parse("invalid", 0xFF999999));
-  EXPECT_EQ(0x00111111, color_util::parse("invalid", 0x00111111));
-  EXPECT_EQ(0xFF000000, color_util::parse("invalid", 0xFF000000));
-  EXPECT_EQ(0xffffffff, color_util::parse("#fff"));
-  EXPECT_EQ(0xFF889900, color_util::parse("#890"));
-  EXPECT_EQ(0x55888777, color_util::parse("#55888777"));
-  EXPECT_EQ(0x88aaaaaa, color_util::parse("#88aaaaaa"));
-  EXPECT_EQ(0x00aaaaaa, color_util::parse("#00aaaaaa"));
-  EXPECT_EQ(0x00FFFFFF, color_util::parse("#00FFFFFF"));
+TEST(BigColor, parseInvalid) {
+  EXPECT_EQ(type::RGB, bigcolor::white().colorspace);
+
+  vector<string> invalid{"invalid", "invalid(1, 2, 3)", "#f", "#ff"};
+  for(auto& str : invalid) {
+    bigcolor tmp;
+    EXPECT_FALSE(bigcolor::try_parse(str, tmp));
+    EXPECT_EQ("#fff", bigcolor::parse(str, bigcolor::white()).to_string());
+  }
 }
 
-TEST(String, simplify) {
-  EXPECT_EQ("#111", color_util::simplify_hex("#FF111111"));
-  EXPECT_EQ("#234", color_util::simplify_hex("#ff223344"));
-  EXPECT_EQ("#ee223344", color_util::simplify_hex("#ee223344"));
-  EXPECT_EQ("#234567", color_util::simplify_hex("#ff234567"));
-  EXPECT_EQ("#00223344", color_util::simplify_hex("#00223344"));
-}
-
-TEST(Color, Parse) {
-   EXPECT_EQ(0xffff0000, color_util::parse("#FF0000"));
-   EXPECT_EQ(0xffff8080, color_util::parse("hsl(0, 1, 0.75, 1)"));
-   EXPECT_EQ(0xff00ffc0, color_util::parse("rgb(0, 1, 0.75)"));
-   EXPECT_EQ(0x80ff8080, color_util::parse("hsl(0, 1, 0.75, 0.5)"));
-   EXPECT_EQ(0x80ffffff, color_util::parse("jzazbz(0.22076484311386071, -0.00016356327300187656, -0.00010207018471919405, 0.5)"));
-}
-
-template <typename ValueType>
-ValueType delta(ValueType one, ValueType two) {
-  return one > two ? one - two : two - one;
-}
-TEST(String, hsl) {
-  // Value of each channel can deviate from the expected value by 1
-  EXPECT_EQ(delta(0xff000000, static_cast<unsigned int>(hsl(360, 0, 0).to_rgb())) & 0xfffefefe, 0);
-  EXPECT_EQ(delta(0xff00ff00, static_cast<unsigned int>(hsl(120, 1, 0.5).to_rgb())) & 0xfffefefe, 0);
-  EXPECT_EQ(delta(0xff0000ff, static_cast<unsigned int>(hsl(240, 1, 0.5).to_rgb())) & 0xfffefefe, 0);
-  EXPECT_EQ(delta(0xff00ffff, static_cast<unsigned int>(hsl(180, 1, 0.5).to_rgb())) & 0xfffefefe, 0);
-  EXPECT_EQ(delta(0xff008888, static_cast<unsigned int>(hsl::from_rgb(rgb{0xff008888}).to_rgb())) & 0xfffefefe, 0);
-  EXPECT_EQ(delta(0xff008800, static_cast<unsigned int>(hsl::from_rgb(rgb{0xff008800}).to_rgb())) & 0xfffefefe, 0);
-  EXPECT_EQ(delta(0xff123456, static_cast<unsigned int>(hsl::from_rgb(rgb{0xff123456}).to_rgb())) & 0xfffefefe, 0);
-  EXPECT_EQ(0.5, hsl(240, 1, 0.25).to_rgb().b);
-  EXPECT_EQ(1.0, hsl(240, 1, 0.75).to_rgb().b);
-  EXPECT_EQ(0.5, hsl(240, 1, 0.75).to_rgb().r);
-  EXPECT_EQ(hsl(240, 1, 0.75).to_rgba(0.75).r, hsl(240, 1, 0.75).to_rgb().r);
-  EXPECT_EQ(hsl(240, 1, 0.75).to_rgba(0.75).g, hsl(240, 1, 0.75).to_rgb().g);
-  EXPECT_EQ(hsl(240, 1, 0.75).to_rgba(0.75).b, hsl(240, 1, 0.75).to_rgb().b);
-  EXPECT_EQ(0.5, hsl(240, 1, 0.75).to_rgba(0.75).g);
+TEST(BigColor, general) {
+   EXPECT_EQ(0xffff0000, bigcolor::parse("#FF0000").to_uint());
+   EXPECT_EQ(0xffff8080, bigcolor::parse("hsl(0, 1, 0.75, 1)").to_uint());
+   EXPECT_EQ(0xff00ffc0, bigcolor::parse("rgb(0, 1, 0.75)").to_uint());
+   EXPECT_EQ(0x80ff8080, bigcolor::parse("hsl(0, 1, 0.75, 0.5)").to_uint());
+   EXPECT_EQ(0x80ffffff, bigcolor::parse("jzazbz(0.22076484311386071, -0.00016356327300187656, -0.00010207018471919405, 0.5)").to_uint());
 }

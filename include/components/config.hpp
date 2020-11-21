@@ -59,8 +59,6 @@ class config {
 
   gradient_t get_gradient(const string&) const;
 
-  string get_color(const string& section, const string& key, const string& default_value) const;
-
   vector<string> get_list(const string& key) const;
 
   vector<string> get_list_throw(const string& section, const string& key) const;

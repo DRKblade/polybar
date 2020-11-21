@@ -32,10 +32,10 @@ void builder::clear() {
   m_tags[syntaxtag::P] = 0;
 
   m_colors.clear();
-  m_colors[syntaxtag::B] = string();
-  m_colors[syntaxtag::F] = string();
-  m_colors[syntaxtag::o] = string();
-  m_colors[syntaxtag::u] = string();
+  m_colors[syntaxtag::B] = smallcolor::empty_value();
+  m_colors[syntaxtag::F] = smallcolor::empty_value();
+  m_colors[syntaxtag::o] = smallcolor::empty_value();
+  m_colors[syntaxtag::u] = smallcolor::empty_value();
 
   m_attrs.clear();
   m_attrs[attribute::NONE] = false;
@@ -130,10 +130,10 @@ void builder::node(const label_t& label, bool keep_colors) {
   }
 
 	if (!keep_colors) {
-    m_colors_closing[syntaxtag::B] = true;
-    m_colors_closing[syntaxtag::F] = true;
-    m_colors_closing[syntaxtag::u] = true;
-    m_colors_closing[syntaxtag::o] = true;
+    m_closing[syntaxtag::B] = true;
+    m_closing[syntaxtag::F] = true;
+    m_closing[syntaxtag::u] = true;
+    m_closing[syntaxtag::o] = true;
 	}
 
   if (label->m_margin.right > 0) {
@@ -230,32 +230,32 @@ void builder::font_close() {
 /**
  * Insert tag to alter the current color
  */
-void builder::color(string color, syntaxtag tag) {
+void builder::color(smallcolor color, syntaxtag tag) {
   if (color.empty()) {
-    if (m_colors_closing[tag]) {
+    if (m_closing[tag]) {
       tag_close(tag);
-      m_colors[tag].clear();
-      m_colors_closing[tag] = false;
+      m_colors[tag] = smallcolor::empty_value();
+      m_closing[tag] = false;
     }
   } else if (color != m_colors[tag]) {
     m_colors[tag] = color;
-    m_colors_closing[tag] = false;
-    tag_open(tag, color);
+    m_closing[tag] = false;
+    tag_open(tag, color.to_string());
   }
 }
 
-void builder::line_color(string color, attribute attr) {
+void builder::line_color(smallcolor color, attribute attr) {
   auto tag = static_cast<syntaxtag>(static_cast<int>(attr));
   if (color.empty()) {
-    if (m_colors_closing[tag]) {
+    if (m_closing[tag]) {
       tag_close(attr);
-      m_colors[tag].clear();
-      m_colors_closing[tag] = false;
+      m_colors[tag] = smallcolor::empty_value();
+      m_closing[tag] = false;
     }
   } else if (color != m_colors[tag]) {
     m_colors[tag] = color;
-    m_colors_closing[tag] = false;
-    tag_open(tag, color);
+    m_closing[tag] = false;
+    tag_open(tag, color.to_string());
     tag_open(attr);
   }
 }
@@ -263,7 +263,7 @@ void builder::line_color(string color, attribute attr) {
 /**
  * Insert tag to alter the current overline/underline color
  */
-void builder::line_color(const string& color) {
+void builder::line_color(smallcolor color) {
   line_color(color, attribute::UNDERLINE);
   line_color(color, attribute::OVERLINE);
 }
@@ -320,34 +320,6 @@ void builder::cmd(mousebtn index, string action, const label_t& label) {
  */
 void builder::cmd_close() {
   tag_close(syntaxtag::A);
-}
-
-/**
- * Get default color hex string
- */
-string builder::color_hex(syntaxtag tag) {
-  string& value = m_colors_default[tag];
-  if (value.empty()) {
-    struct color code;
-		switch(tag) {
-  	 case syntaxtag::B:
-    	code = m_bar.background;
-    	break;
-  	 case syntaxtag::F:
-    	code = m_bar.foreground;
-    	break;
-  	 case syntaxtag::u:
-    	code = m_bar.underline.color;
-    	break;
-  	 case syntaxtag::o:
-    	code = m_bar.overline.color;
-    	break;
-     default:
-      throw application_error("Unknown color tag '" + to_string(static_cast<int>(tag)) + "'");
-		}
-		value = code.to_hex();
-  }
-  return value;
 }
 
 /**

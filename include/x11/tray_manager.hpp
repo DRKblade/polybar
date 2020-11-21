@@ -59,7 +59,7 @@ struct tray_settings {
   unsigned int height_fill{0U};
   unsigned int spacing{0U};
   unsigned int sibling{0U};
-  unsigned int background{0U};
+  smallcolor background{0U};
   bool transparent{false};
   bool detached{false};
 };
